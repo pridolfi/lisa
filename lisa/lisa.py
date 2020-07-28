@@ -19,9 +19,10 @@ def main():
         n.lisa_connect()
         i=0
         while True:
-            n.lisa_send(str(i).encode())
+            n.lisa_send(f'uptime:{i}'.encode())
             i+=1
             print(n.lisa_recv())
+            time.sleep(1)
 
 if __name__ == "__main__":
     main()

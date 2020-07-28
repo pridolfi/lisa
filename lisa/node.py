@@ -52,14 +52,17 @@ class Node(Core):
 
     def lisa_send(self, data_to_send):
         cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
+        length = 16 - (len(data_to_send) % 16)
+        data_to_send += bytes([length])*length
         aes_payload = cipher_aes.encrypt(data_to_send)
         self.s.sendto(aes_payload, self.dispatcher_addr)
 
 
     def lisa_recv(self):
-        recv_data, remote_addr = self.s.recvfrom(self.DEFAULT_PACKET_SIZE_B)
+        recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
         if remote_addr != self.dispatcher_addr:
             self.logger.exception("%s != %s", remote_addr, self.dispatcher_addr)
         decipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
         recv_data = decipher_aes.decrypt(recv_data)
+        recv_data = recv_data[:-recv_data[-1]]
         return recv_data
