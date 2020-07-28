@@ -1,0 +1,9 @@
+# node configuration
+
+main/lisa_conf.c
+
+# binaries and build files
+
+build/
+sdkconfig*
+.vscode
