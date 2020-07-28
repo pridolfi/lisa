@@ -12,4 +12,4 @@ Remember to create file `lisa_conf.c` declaring the following variables:
 - `const char wifi_ssid[]` Wi-Fi SSID.
 - `const char wifi_passwd[]` Wi-Fi password.
 
-You can use `generate_config.py`.
+You can run `lisa.py register node_name` for an automated process.
