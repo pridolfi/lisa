@@ -60,7 +60,6 @@ class Dispatcher(Core):
                 recv_data = decipher_aes.decrypt(recv_data).decode('utf-8')
                 response = self.process_data(recv_data, peername)
                 cipher_aes = AES.new(aes_session_key, AES.MODE_CBC, iv)
-                print(len(response))
                 self.s.sendto(cipher_aes.encrypt(response.encode()), address)
                 if response == 'close':
                     break
