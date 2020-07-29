@@ -57,7 +57,7 @@ class Dispatcher(Core):
             while True:
                 recv_data = queue.get(timeout=self.TIMEOUT_S)
                 decipher_aes = AES.new(aes_session_key, AES.MODE_CBC, iv)
-                recv_data = decipher_aes.decrypt(recv_data).decode('utf-8')
+                recv_data = decipher_aes.decrypt(recv_data)
                 recv_data = recv_data[:-recv_data[-1]]
                 response = self.process_data(recv_data, peername)
                 padding_len = 16 - (len(response) % 16)
