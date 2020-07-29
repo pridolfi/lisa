@@ -58,10 +58,13 @@ class Dispatcher(Core):
                 recv_data = queue.get(timeout=self.TIMEOUT_S)
                 decipher_aes = AES.new(aes_session_key, AES.MODE_CBC, iv)
                 recv_data = decipher_aes.decrypt(recv_data).decode('utf-8')
+                recv_data = recv_data[:-recv_data[-1]]
                 response = self.process_data(recv_data, peername)
+                padding_len = 16 - (len(response) % 16)
+                response += bytes([padding_len])*padding_len
                 cipher_aes = AES.new(aes_session_key, AES.MODE_CBC, iv)
-                self.s.sendto(cipher_aes.encrypt(response.encode()), address)
-                if response == 'close':
+                self.s.sendto(cipher_aes.encrypt(response), address)
+                if response == b'close':
                     break
         except Exception as e:
             self.logger.info(str(e.__class__) + ' ' + str(e))
