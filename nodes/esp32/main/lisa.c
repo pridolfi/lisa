@@ -195,16 +195,17 @@ int32_t lisa_send(void * data, size_t len)
     bzero(&cipher_buf, sizeof(cipher_buf));
     bzero(&socket_buf, sizeof(socket_buf));
     memcpy(cipher_buf, pdata, len);
-    size_t aes_len = (len+16) & ~0xF;
+    size_t padding_len = 16 - (len & 0xF);
+    memset(cipher_buf+len, padding_len, padding_len);
     uint8_t iv[16];
     memcpy(iv, aes_iv, 16);
     mbedtls_aes_context aes;
     mbedtls_aes_init(&aes);
     int ret = mbedtls_aes_setkey_enc(&aes, aes_key, 128);
     ESP_LOGD(TAG, "mbedtls_aes_setkey_enc: %d", ret);
-    ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, aes_len, iv, (uint8_t *)&cipher_buf, socket_buf);
-    ESP_LOGD(TAG, "mbedtls_aes_crypt_cbc: %u %d", aes_len, ret);
-    ret = sendto(sock, socket_buf, aes_len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, len+padding_len, iv, (uint8_t *)&cipher_buf, socket_buf);
+    ESP_LOGD(TAG, "mbedtls_aes_crypt_cbc: %u %d", len+padding_len, ret);
+    ret = sendto(sock, socket_buf, len+padding_len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
     mbedtls_aes_free(&aes);
     return ret;
 }
@@ -230,13 +231,18 @@ int32_t lisa_recv(void * data, size_t len)
     ESP_LOGD(TAG, "mbedtls_aes_setkey_dec: %d", ret);
     bzero(&cipher_buf, sizeof(cipher_buf));
     ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, recv_len, iv, socket_buf, (uint8_t *)&cipher_buf);
+    mbedtls_aes_free(&aes);
     ESP_LOGD(TAG, "mbedtls_aes_crypt_cbc: %u %d", recv_len, ret);
     if (ret == 0) {
+        size_t padding_len = cipher_buf[recv_len-1];
+        recv_len -= padding_len;
+        cipher_buf[recv_len] = 0;
         ESP_LOGD(TAG, "lisa_recv: %s", cipher_buf);
         memcpy((uint8_t*)data, cipher_buf, recv_len > len ? len : recv_len);
+        return recv_len > len ? len : recv_len;
+    } else {
+        return -1;
     }
-    mbedtls_aes_free(&aes);
-    return recv_len > len ? len : recv_len;
 }
 
 int32_t lisa_close(void)
