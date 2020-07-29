@@ -15,14 +15,12 @@ def main():
         import time
         from node import Node
         n = Node()
-        n.set_dispatcher('srv1.codenload.com')
-        n.lisa_connect()
-        i=0
+        n.run_node('srv1.codenload.com')
         while True:
-            n.lisa_send(f'uptime:{i}'.encode())
-            i+=1
-            print(n.lisa_recv())
-            time.sleep(1)
+            n.lisa_send(b'test')
+            recv = n.lisa_recv()
+            print(f'test recv: {recv}')
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()

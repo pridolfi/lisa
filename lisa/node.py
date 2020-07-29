@@ -3,6 +3,8 @@ LISA Node (client) class.
 '''
 
 import socket
+import threading
+import time
 
 from queue import Queue
 from Crypto.Cipher import AES, PKCS1_v1_5
@@ -15,16 +17,21 @@ class Node(Core):
         super().__init__()
         self.s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.aes_session_key = None
+        self.send_queue = Queue()
+        self.recv_queue = Queue()
+        self.running = False
 
 
-    def set_dispatcher(self, peername, port=None):
+    def _set_dispatcher(self, peername, port=None):
         ''' Set dispatcher to communicate with. '''
         p = self.LISA_PORT if port is None else port
         self.dispatcher_addr = (self.resolve(peername), p)
         self.dispatcher_name = peername
         self.dispatcher_pubkey = self.get_peer_key(self.dispatcher_name)
 
-    def lisa_connect(self):
+
+    def _lisa_connect(self, dispatcher_name, dispatcher_port=None):
+        self._set_dispatcher(dispatcher_name, dispatcher_port)
         sentinel = None
         cipher_rsa = PKCS1_v1_5.new(self.dispatcher_pubkey)
         decipher_rsa = PKCS1_v1_5.new(self.private_key)
@@ -37,11 +44,12 @@ class Node(Core):
         session_data = decipher_rsa.decrypt(recv_data, sentinel)
         if len(session_data) != 32:
             raise ConnectionError("error receiving session key")
+        self.logger.info('connected to %s:%s', dispatcher_name, self.dispatcher_addr[1])
         self.aes_session_key = session_data[0:16]
         self.aes_session_iv = session_data[16:32]
 
 
-    def lisa_close(self):
+    def _lisa_close(self):
         self.lisa_send('close')
         recv_data = self.session_recv()
         if recv_data != 'close':
@@ -50,7 +58,7 @@ class Node(Core):
         self.aes_session_iv = None
 
 
-    def lisa_send(self, data_to_send):
+    def _lisa_send(self, data_to_send):
         cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
         length = 16 - (len(data_to_send) % 16)
         data_to_send += bytes([length])*length
@@ -58,7 +66,7 @@ class Node(Core):
         self.s.sendto(aes_payload, self.dispatcher_addr)
 
 
-    def lisa_recv(self):
+    def _lisa_recv(self):
         recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
         if remote_addr != self.dispatcher_addr:
             self.logger.exception("%s != %s", remote_addr, self.dispatcher_addr)
@@ -66,3 +74,46 @@ class Node(Core):
         recv_data = decipher_aes.decrypt(recv_data)
         recv_data = recv_data[:-recv_data[-1]]
         return recv_data
+
+
+    def _node_thread(self, dispatcher_name, dispatcher_port):
+        self.logger.info('starting node thread')
+        while self.running:
+            try:
+                self._lisa_connect(dispatcher_name, dispatcher_port)
+                while self.running:
+                    if self.send_queue.empty():
+                        uptime_ms = int(time.monotonic()*1000)
+                        start = time.monotonic()
+                        self._lisa_send(f'uptime:{uptime_ms}'.encode())
+                        uptime_response = self._lisa_recv()
+                        self.logger.info(f'uptime response: {uptime_response}')
+                        end = time.monotonic()
+                        t = end - start
+                        time.sleep(1-t if t < 1 else 1)
+                    else:
+                        data_to_send = self.send_queue.get()
+                        self._lisa_send(data_to_send)
+                        self.recv_queue.put(self._lisa_recv())
+            except Exception as ex:
+                self.logger.exception(str(ex))
+                time.sleep(1)
+        self._lisa_close()
+        self.logger.info('ending node thread')
+
+
+    def lisa_send(self, data_to_send):
+        self.send_queue.put(data_to_send)
+    
+
+    def lisa_recv(self, timeout_s=None):
+        return self.recv_queue.get(timeout=timeout_s)
+
+
+    def run_node(self, dispatcher_name, dispatcher_port=None):
+        self.running = True
+        thread = threading.Thread(target=self._node_thread, args=[dispatcher_name, dispatcher_port], daemon=True).start()
+
+
+    def stop_node(self):
+        self.running = False
