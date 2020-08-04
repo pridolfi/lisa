@@ -15,7 +15,7 @@ def main():
         import time
         from node import Node
         n = Node()
-        n.run_node('srv1.codenload.com')
+        n.start()
         while True:
             n.lisa_send(b'test')
             recv = n.lisa_recv()

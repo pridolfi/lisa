@@ -8,6 +8,7 @@ import os
 import socket
 import logging
 import sys
+import yaml
 
 from Crypto.PublicKey import RSA
 
@@ -16,21 +17,33 @@ class Core(object):
 
     def __init__(self):
         ''' Initialize class base members and load node keys. '''
-        self.NODE_ID = os.getenv('LISA_NODE_ID', socket.gethostname())
         self.LISA_FOLDER = os.getenv('LISA_FOLDER', os.path.join(os.getenv('HOME'), '.lisa'))
-        self.PEERS_FOLDER = os.path.join(self.LISA_FOLDER, 'peers')
-        self.PRIVATE_KEY_FILE = os.path.join(self.LISA_FOLDER, self.NODE_ID)
-        self.PUBLIC_KEY_FILE = os.path.join(self.LISA_FOLDER, f'{self.NODE_ID}.pub')
-        self.LISA_PORT = os.getenv('LISA_PORT', 5432)
-        self.TIMEOUT_S = 30
-        self.PACKET_SIZE_B = 1024
-        os.system('mkdir -p {}'.format(self.PEERS_FOLDER))
         self.logger = logging.getLogger('LISA')
         self.logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(module)s.%(funcName)s: %(message)s'))
         self.logger.addHandler(handler)
+        self.load_settings()
         self.load_keys()
+
+
+    def load_settings(self):
+        settings_file = os.path.join(self.LISA_FOLDER, "settings.yaml")
+        try:
+            with open(settings_file) as settings:
+                self.settings = yaml.safe_load(settings)
+        except FileNotFoundError:
+            self.logger.warning('settings file %s not found, using defaults', settings_file)
+            self.logger.warning("remember to set 'dispatcher_name' if necessary!")
+            self.settings = dict()
+        self.NODE_ID = self.settings.get('LISA_NODE_ID', socket.gethostname())
+        self.PEERS_FOLDER = os.path.join(self.LISA_FOLDER, 'peers')
+        self.PRIVATE_KEY_FILE = os.path.join(self.LISA_FOLDER, self.NODE_ID)
+        self.PUBLIC_KEY_FILE = os.path.join(self.LISA_FOLDER, f'{self.NODE_ID}.pub')
+        self.LISA_PORT = self.settings.get('LISA_PORT', 5432)
+        self.TIMEOUT_S = self.settings.get('TIMEOUT_S', 30)
+        self.PACKET_SIZE_B = self.settings.get('PACKET_SIZE_B', 1024)
+        os.system('mkdir -p {}'.format(self.PEERS_FOLDER))
 
 
     def load_keys(self):
@@ -80,8 +93,12 @@ class Core(object):
 
     def get_peer_key(self, peername):
         ''' Obtain peer public key to encrypt data. '''
-        key = RSA.importKey(open(os.path.join(self.PEERS_FOLDER, '{}.pub'.format(peername)), 'rb').read())
-        return key
+        try:
+            key = RSA.importKey(open(os.path.join(self.PEERS_FOLDER, '{}.pub'.format(peername)), 'rb').read())
+            return key
+        except FileNotFoundError:
+            self.logger.exception('%s public key not found!', peername)
+            raise
 
 
     def scp_exchange_pubkeys(self, user_host_port):

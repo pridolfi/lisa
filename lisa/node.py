@@ -5,11 +5,12 @@ LISA Node (client) class.
 import socket
 import threading
 import time
-
 from queue import Queue
+
 from Crypto.Cipher import AES, PKCS1_v1_5
 
 from core import Core
+
 
 class Node(Core):
 
@@ -20,18 +21,13 @@ class Node(Core):
         self.send_queue = Queue()
         self.recv_queue = Queue()
         self.running = False
+        self.dispatcher_addr = (
+            self.resolve(self.settings['dispatcher_name']),
+            self.settings.get('dispatcher_port', self.LISA_PORT)
+        )
+        self.dispatcher_pubkey = self.get_peer_key(self.settings.get('dispatcher_name'))
 
-
-    def _set_dispatcher(self, peername, port=None):
-        ''' Set dispatcher to communicate with. '''
-        p = self.LISA_PORT if port is None else port
-        self.dispatcher_addr = (self.resolve(peername), p)
-        self.dispatcher_name = peername
-        self.dispatcher_pubkey = self.get_peer_key(self.dispatcher_name)
-
-
-    def _lisa_connect(self, dispatcher_name, dispatcher_port=None):
-        self._set_dispatcher(dispatcher_name, dispatcher_port)
+    def __lisa_connect(self):
         sentinel = None
         cipher_rsa = PKCS1_v1_5.new(self.dispatcher_pubkey)
         decipher_rsa = PKCS1_v1_5.new(self.private_key)
@@ -44,12 +40,12 @@ class Node(Core):
         session_data = decipher_rsa.decrypt(recv_data, sentinel)
         if len(session_data) != 32:
             raise ConnectionError("error receiving session key")
-        self.logger.info('connected to %s:%s', dispatcher_name, self.dispatcher_addr[1])
+        self.logger.info('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
         self.aes_session_key = session_data[0:16]
         self.aes_session_iv = session_data[16:32]
 
 
-    def _lisa_close(self):
+    def __lisa_close(self):
         self.lisa_send('close')
         recv_data = self.session_recv()
         if recv_data != 'close':
@@ -58,7 +54,7 @@ class Node(Core):
         self.aes_session_iv = None
 
 
-    def _lisa_send(self, data_to_send):
+    def __lisa_send(self, data_to_send):
         cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
         length = 16 - (len(data_to_send) % 16)
         data_to_send += bytes([length])*length
@@ -66,7 +62,7 @@ class Node(Core):
         self.s.sendto(aes_payload, self.dispatcher_addr)
 
 
-    def _lisa_recv(self):
+    def __lisa_recv(self):
         recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
         if remote_addr != self.dispatcher_addr:
             self.logger.exception("%s != %s", remote_addr, self.dispatcher_addr)
@@ -76,29 +72,29 @@ class Node(Core):
         return recv_data
 
 
-    def _node_thread(self, dispatcher_name, dispatcher_port):
+    def __node_thread(self):
         self.logger.info('starting node thread')
         while self.running:
             try:
-                self._lisa_connect(dispatcher_name, dispatcher_port)
+                self.__lisa_connect()
                 while self.running:
                     if self.send_queue.empty():
                         uptime_ms = int(time.monotonic()*1000)
                         start = time.monotonic()
-                        self._lisa_send(f'uptime:{uptime_ms}'.encode())
-                        uptime_response = self._lisa_recv()
+                        self.__lisa_send(f'uptime:{uptime_ms}'.encode())
+                        uptime_response = self.__lisa_recv()
                         self.logger.info(f'uptime response: {uptime_response}')
                         end = time.monotonic()
                         t = end - start
                         time.sleep(1-t if t < 1 else 1)
                     else:
                         data_to_send = self.send_queue.get()
-                        self._lisa_send(data_to_send)
-                        self.recv_queue.put(self._lisa_recv())
+                        self.__lisa_send(data_to_send)
+                        self.recv_queue.put(self.__lisa_recv())
             except Exception as ex:
                 self.logger.exception(str(ex))
                 time.sleep(1)
-        self._lisa_close()
+        self.__lisa_close()
         self.logger.info('ending node thread')
 
 
@@ -110,9 +106,9 @@ class Node(Core):
         return self.recv_queue.get(timeout=timeout_s)
 
 
-    def run_node(self, dispatcher_name, dispatcher_port=None):
+    def start(self):
         self.running = True
-        thread = threading.Thread(target=self._node_thread, args=[dispatcher_name, dispatcher_port], daemon=True).start()
+        threading.Thread(target=self.__node_thread, daemon=True).start()
 
 
     def stop_node(self):
