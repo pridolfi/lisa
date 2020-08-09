@@ -5,7 +5,7 @@ LISA Dispatcher (server) class.
 import socket
 import threading
 
-from queue import Queue
+from queue import Queue, Empty
 from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.Random import get_random_bytes
 
@@ -69,6 +69,8 @@ class Dispatcher(Core):
         except ValueError as ex:
             self.logger.exception(str(ex))
             self.logger.warning('received data: %s', recv_data)
+        except Empty as ex:
+            self.logger.info('receive queue empty')
         except Exception as ex:
             self.logger.exception(str(ex))
         self.logger.info('end session: %s %s', peername, address)
