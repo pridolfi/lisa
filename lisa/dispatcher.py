@@ -66,8 +66,11 @@ class Dispatcher(Core):
                 self.s.sendto(cipher_aes.encrypt(response), address)
                 if response == b'close':
                     break
-        except Exception as e:
-            self.logger.info(str(e.__class__) + ' ' + str(e))
+        except ValueError as ex:
+            self.logger.exception(str(ex))
+            self.logger.warning('received data: %s', recv_data)
+        except Exception as ex:
+            self.logger.exception(str(ex.__class__) + ' ' + str(ex))
         self.logger.info('end session: %s %s', peername, address)
         del self.active_clients[address]
 
