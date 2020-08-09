@@ -70,7 +70,7 @@ class Dispatcher(Core):
             self.logger.exception(str(ex))
             self.logger.warning('received data: %s', recv_data)
         except Exception as ex:
-            self.logger.exception(str(ex.__class__) + ' ' + str(ex))
+            self.logger.exception(str(ex))
         self.logger.info('end session: %s %s', peername, address)
         del self.active_clients[address]
 
