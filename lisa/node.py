@@ -34,6 +34,10 @@ class Node(Core):
         self.thread.start()
 
 
+    def __del__(self):
+        self.__lisa_close()
+
+
     def __node_thread(self):
         self.logger.info('starting node session')
         self.running = True
@@ -112,7 +116,3 @@ class Node(Core):
 
     def lisa_recv(self, timeout_s=None):
         return self.recv_queue.get(timeout=timeout_s)
-
-
-    def __del__(self):
-        self.__lisa_close()

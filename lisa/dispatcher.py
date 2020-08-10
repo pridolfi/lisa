@@ -26,20 +26,21 @@ class Dispatcher(Core):
         if receiver not in self.node_messages:
             self.node_messages[receiver] = Queue()
         self.node_messages[receiver].put(payload)
-        return
 
 
     def get_message(self, host):
-        rv = False
+        rv = None
         try:
             rv = self.node_messages[host].get(block=False)
         except Exception:
             pass
         return rv
 
+
     def process_data(self, recv_data, peername):
         self.logger.info('%s: %s', peername, recv_data)
         return recv_data
+
 
     def session_thread(self, address):
         sentinel = None
@@ -64,7 +65,7 @@ class Dispatcher(Core):
                 response += bytes([padding_len])*padding_len
                 cipher_aes = AES.new(aes_session_key, AES.MODE_CBC, iv)
                 self.s.sendto(cipher_aes.encrypt(response), address)
-                if response == b'close':
+                if recv_data == b'close':
                     break
         except ValueError as ex:
             self.logger.exception(str(ex))
