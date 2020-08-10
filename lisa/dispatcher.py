@@ -30,7 +30,7 @@ class Dispatcher(Core):
 
 
     def get_message(self, host):
-        rv = self.RESPONSE_EMPTY
+        rv = False
         try:
             rv = self.node_messages[host].get(block=False)
         except Exception:

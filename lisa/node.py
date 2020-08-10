@@ -21,59 +21,22 @@ class Node(Core):
         self.send_queue = Queue()
         self.recv_queue = Queue()
         self.running = False
-        self.dispatcher_addr = (
-            self.resolve(self.settings['dispatcher_name']),
-            self.settings.get('dispatcher_port', self.LISA_PORT)
-        )
-        self.dispatcher_pubkey = self.get_peer_key(self.settings.get('dispatcher_name'))
-
-    def __lisa_connect(self):
-        sentinel = None
-        cipher_rsa = PKCS1_v1_5.new(self.dispatcher_pubkey)
-        decipher_rsa = PKCS1_v1_5.new(self.private_key)
-        self.s.settimeout(self.TIMEOUT_S)
-        rsa_payload = cipher_rsa.encrypt(self.NODE_ID.encode())
-        self.s.sendto(rsa_payload, self.dispatcher_addr)
-        recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
-        if remote_addr != self.dispatcher_addr:
-            self.logger.warning("%s != %s", remote_addr, self.dispatcher_addr)
-        session_data = decipher_rsa.decrypt(recv_data, sentinel)
-        if len(session_data) != 32:
-            raise ConnectionError("error receiving session key")
-        self.logger.info('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
-        self.aes_session_key = session_data[0:16]
-        self.aes_session_iv = session_data[16:32]
-
-
-    def __lisa_close(self):
-        self.lisa_send('close')
-        recv_data = self.session_recv()
-        if recv_data != 'close':
-            self.logger.warning('received %s', recv_data)
-        self.aes_session_key = None
-        self.aes_session_iv = None
-
-
-    def __lisa_send(self, data_to_send):
-        cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
-        length = 16 - (len(data_to_send) % 16)
-        data_to_send += bytes([length])*length
-        aes_payload = cipher_aes.encrypt(data_to_send)
-        self.s.sendto(aes_payload, self.dispatcher_addr)
-
-
-    def __lisa_recv(self):
-        recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
-        if remote_addr != self.dispatcher_addr:
-            self.logger.exception("%s != %s", remote_addr, self.dispatcher_addr)
-        decipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
-        recv_data = decipher_aes.decrypt(recv_data)
-        recv_data = recv_data[:-recv_data[-1]]
-        return recv_data
+        try:
+            self.dispatcher_addr = (
+                self.resolve(self.settings['dispatcher_name']),
+                self.settings.get('dispatcher_port', self.LISA_PORT)
+            )
+            self.dispatcher_pubkey = self.get_peer_key(self.settings.get('dispatcher_name'))
+        except Exception as ex:
+            self.logger.exception('exception setting dispatcher access, check your configuration! (%s)', str(ex))
+            return
+        self.thread = threading.Thread(target=self.__node_thread, daemon=True)
+        self.thread.start()
 
 
     def __node_thread(self):
-        self.logger.info('starting node thread')
+        self.logger.info('starting node session')
+        self.running = True
         while self.running:
             try:
                 self.__lisa_connect()
@@ -98,6 +61,51 @@ class Node(Core):
         self.logger.info('ending node thread')
 
 
+    def __lisa_connect(self):
+        sentinel = None
+        cipher_rsa = PKCS1_v1_5.new(self.dispatcher_pubkey)
+        decipher_rsa = PKCS1_v1_5.new(self.private_key)
+        self.s.settimeout(self.TIMEOUT_S)
+        rsa_payload = cipher_rsa.encrypt(self.NODE_ID.encode())
+        self.s.sendto(rsa_payload, self.dispatcher_addr)
+        recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
+        if remote_addr != self.dispatcher_addr:
+            self.logger.warning("%s != %s", remote_addr, self.dispatcher_addr)
+        session_data = decipher_rsa.decrypt(recv_data, sentinel)
+        if len(session_data) != 32:
+            raise ConnectionError("error receiving session key")
+        self.logger.info('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
+        self.aes_session_key = session_data[0:16]
+        self.aes_session_iv = session_data[16:32]
+
+
+    def __lisa_close(self):
+        self.__lisa_send(b'close')
+        recv_data = self.__lisa_recv()
+        if recv_data != 'close':
+            self.logger.warning('received %s', recv_data)
+        self.aes_session_key = None
+        self.aes_session_iv = None
+
+
+    def __lisa_send(self, data_to_send):
+        cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
+        length = 16 - (len(data_to_send) % 16)
+        data_to_send += bytes([length])*length
+        aes_payload = cipher_aes.encrypt(data_to_send)
+        self.s.sendto(aes_payload, self.dispatcher_addr)
+
+
+    def __lisa_recv(self):
+        recv_data, remote_addr = self.s.recvfrom(self.PACKET_SIZE_B)
+        if remote_addr != self.dispatcher_addr:
+            self.logger.exception("%s != %s", remote_addr, self.dispatcher_addr)
+        decipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
+        recv_data = decipher_aes.decrypt(recv_data)
+        recv_data = recv_data[:-recv_data[-1]]
+        return recv_data
+
+
     def lisa_send(self, data_to_send):
         self.send_queue.put(data_to_send)
     
@@ -106,10 +114,5 @@ class Node(Core):
         return self.recv_queue.get(timeout=timeout_s)
 
 
-    def start(self):
-        self.running = True
-        threading.Thread(target=self.__node_thread, daemon=True).start()
-
-
-    def stop_node(self):
-        self.running = False
+    def __del__(self):
+        self.__lisa_close()
