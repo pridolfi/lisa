@@ -42,8 +42,9 @@ class Dispatcher(Core):
         self.logger.info('%s: %s', peername, recv_data)
         if recv_data.startswith(b'register:'):
             _, name, pubkey = recv_data.split(b':')
+            name = name.decode()
             self.logger.info('registering %s', name)
-            with open(os.path.join(self.PEERS_FOLDER, f'{name}.pub', 'wb')) as fd:
+            with open(os.path.join(self.PEERS_FOLDER, f'{name}.pub'), 'wb') as fd:
                 fd.write(pubkey)
             return b'registered OK'            
         return recv_data
