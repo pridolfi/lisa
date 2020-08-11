@@ -30,7 +30,7 @@ class Node(Core):
         except Exception as ex:
             self.logger.exception('exception setting dispatcher access, check your configuration! (%s)', str(ex))
             return
-        self.thread = threading.Thread(target=self.__node_thread, daemon=True)
+        self.thread = threading.Thread(target=self.__node_thread)
         self.thread.start()
 
 
@@ -56,6 +56,7 @@ class Node(Core):
                         time.sleep(1-t if t < 1 else 1)
                     else:
                         data_to_send = self.send_queue.get()
+                        print(b'send:' +  data_to_send)
                         self.__lisa_send(data_to_send)
                         self.recv_queue.put(self.__lisa_recv())
             except Exception as ex:

@@ -4,6 +4,7 @@ LISA Dispatcher (server) class.
 
 import socket
 import threading
+import os
 
 from queue import Queue, Empty
 from Crypto.Cipher import AES, PKCS1_v1_5
@@ -39,6 +40,12 @@ class Dispatcher(Core):
 
     def process_data(self, recv_data, peername):
         self.logger.info('%s: %s', peername, recv_data)
+        if recv_data.startswith(b'register:'):
+            _, name, pubkey = recv_data.split(b':')
+            self.logger.info('registering %s', name)
+            with open(os.path.join(self.PEERS_FOLDER, f'{name}.pub', 'wb')) as fd:
+                fd.write(pubkey)
+            return b'registered OK'            
         return recv_data
 
 
