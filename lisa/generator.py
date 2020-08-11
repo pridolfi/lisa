@@ -19,6 +19,11 @@ class NodeConfigGenerator(Node):
         data_to_send = b'register:' + self.node_id.encode() + b':' + self.node_private_key.publickey().export_key()
         print(data_to_send)
         self.lisa_send(data_to_send)
+        response = self.lisa_recv()
+        if response != b'registered OK':
+            self.logger.error('Error registering node to dispatcher.')
+        else:
+            self.logger.info(f'{self.node_id} registered successfully.')
 
 
     def get_user_input(self):
@@ -50,3 +55,4 @@ if __name__ == "__main__":
     conf.get_user_input()
     conf.print_lisa_conf()
     conf.register_node()
+    conf.lisa_close()

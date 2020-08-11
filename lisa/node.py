@@ -34,10 +34,6 @@ class Node(Core):
         self.thread.start()
 
 
-    def __del__(self):
-        self.__lisa_close()
-
-
     def __node_thread(self):
         self.logger.info('starting node session')
         self.running = True
@@ -50,13 +46,12 @@ class Node(Core):
                         start = time.monotonic()
                         self.__lisa_send(f'uptime:{uptime_ms}'.encode())
                         uptime_response = self.__lisa_recv()
-                        self.logger.info(f'uptime response: {uptime_response}')
+                        self.logger.debug(f'uptime response: {uptime_response}')
                         end = time.monotonic()
                         t = end - start
                         time.sleep(1-t if t < 1 else 1)
                     else:
                         data_to_send = self.send_queue.get()
-                        print(b'send:' +  data_to_send)
                         self.__lisa_send(data_to_send)
                         self.recv_queue.put(self.__lisa_recv())
             except Exception as ex:
@@ -87,10 +82,11 @@ class Node(Core):
     def __lisa_close(self):
         self.__lisa_send(b'close')
         recv_data = self.__lisa_recv()
-        if recv_data != 'close':
+        if recv_data != b'close':
             self.logger.warning('received %s', recv_data)
         self.aes_session_key = None
         self.aes_session_iv = None
+        self.running = False
 
 
     def __lisa_send(self, data_to_send):
@@ -117,3 +113,8 @@ class Node(Core):
 
     def lisa_recv(self, timeout_s=None):
         return self.recv_queue.get(timeout=timeout_s)
+
+
+    def lisa_close(self):
+        self.running = False
+        self.thread.join()
