@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 LISA command line interface
 '''

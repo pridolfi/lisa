@@ -17,5 +17,6 @@ setup(
     author_email='pabloridolfi@gmail.com',
     url='https://github.com/pridolfi/lisa',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=find_packages(exclude=('tests', 'docs')),
+    scripts=['lisa/lisa_run.py']
 )
