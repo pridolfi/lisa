@@ -10,7 +10,7 @@ from queue import Queue, Empty
 from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.Random import get_random_bytes
 
-from core import Core
+from lisa.core import Core
 
 
 class Dispatcher(Core):

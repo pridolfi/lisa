@@ -9,7 +9,7 @@ from queue import Queue
 
 from Crypto.Cipher import AES, PKCS1_v1_5
 
-from core import Core
+from lisa.core import Core
 
 
 class Node(Core):
