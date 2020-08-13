@@ -34,14 +34,13 @@ class Core(object):
                 self.settings = yaml.safe_load(settings)
         except FileNotFoundError:
             self.logger.warning('settings file %s not found, using defaults', settings_file)
-            self.logger.warning("remember to set 'dispatcher_name' if necessary!")
             self.settings = dict()
         self.NODE_ID = self.settings.get('LISA_NODE_ID', socket.gethostname())
         self.PEERS_FOLDER = os.path.join(self.LISA_FOLDER, 'peers')
         self.PRIVATE_KEY_FILE = os.path.join(self.LISA_FOLDER, self.NODE_ID)
         self.PUBLIC_KEY_FILE = os.path.join(self.LISA_FOLDER, f'{self.NODE_ID}.pub')
         self.LISA_PORT = self.settings.get('LISA_PORT', 5432)
-        self.TIMEOUT_S = self.settings.get('TIMEOUT_S', 30)
+        self.TIMEOUT_S = self.settings.get('TIMEOUT_S', 20)
         self.PACKET_SIZE_B = self.settings.get('PACKET_SIZE_B', 1024)
         os.system('mkdir -p {}'.format(self.PEERS_FOLDER))
 
