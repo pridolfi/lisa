@@ -15,8 +15,10 @@ def main():
     elif 'node' == sys.argv[1]:
         import time
         from lisa.node import Node
-        Node()
+        node = Node()
         time.sleep(10)
+        node.lisa_close()
+
 
 if __name__ == "__main__":
     main()

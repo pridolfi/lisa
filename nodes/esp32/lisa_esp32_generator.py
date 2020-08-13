@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 LISA node configuration generator.
 '''
@@ -31,6 +32,10 @@ class NodeConfigGenerator(Node):
         self.node_id = input('Node ID: ')
         self.wifi_ssid = input('Wi-Fi SSID: ')
         self.wifi_passwd = getpass('Wi-Fi password: ')
+        passwd2 = getpass('Wi-Fi password again: ')
+        if self.wifi_passwd != passwd2:
+            self.lisa_close()
+            raise ValueError('Passwords do not match!')
 
 
     def lisa_conf(self):
@@ -51,19 +56,21 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
 '''
 
 
-    def generate_esp32(self, out_path):
-        conf.get_user_input()
+    def generate(self, out_path):
+        self.get_user_input()
         with open(out_path, 'w') as fd:
             self.logger.info('Writing configuration to %s', out_path)
-            fd.write(conf.lisa_conf())
+            fd.write(self.lisa_conf())
         self.logger.info('Registering %s to %s...', self.node_id, self.settings.get('dispatcher_name'))
-        conf.register_node()
-        conf.lisa_close()
+        self.register_node()
+        self.lisa_close()
+        self.logger.info('Configuration written to %s', os.path.abspath(out_path))
 
 
 if __name__ == "__main__":
     conf = NodeConfigGenerator()
-    conf.generate_esp32(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-        'main', 'lisa_conf.c')
-    )
+    if len(sys.argv) > 1:
+        path = os.path.join(sys.argv[1], 'lisa_conf.c')
+    else:
+        path = './lisa_conf.c'
+    conf.generate(path)

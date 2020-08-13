@@ -18,5 +18,5 @@ setup(
     url='https://github.com/pridolfi/lisa',
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
-    scripts=['lisa/lisa_run.py']
+    scripts=['lisa/lisa_run.py', 'nodes/esp32/lisa_esp32_generator.py']
 )
