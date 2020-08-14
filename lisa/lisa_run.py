@@ -4,15 +4,21 @@ LISA command line interface
 '''
 
 import sys
+from argparse import ArgumentParser
+
+def parse_arguments():
+    parser = ArgumentParser(description='LISA command line interface')
+    parser.add_argument('action', nargs='?', help='Action to perform.', choices=['node', 'dispatcher'], default='node')
+    return parser.parse_args(sys.argv[1:])
+
 
 def main():
-    if 'dispatcher' == sys.argv[1]:
+    options = parse_arguments()
+    if 'dispatcher' == options.action:
         from lisa.dispatcher import Dispatcher
         d = Dispatcher()
         d.run_dispatcher()
-    # todo client
-    # todo register node (generate lisa_conf.c)
-    elif 'node' == sys.argv[1]:
+    elif 'node' == options.action:
         import time
         from lisa.node import Node
         node = Node()
