@@ -19,7 +19,7 @@ class NodeConfigGenerator(Node):
 
 
     def register_node(self):
-        data_to_send = b'register:' + self.node_id.encode() + b':' + self.node_private_key.publickey().export_key()
+        data_to_send = b'register:' + self.node_id.encode() + b':' + self.node_public_key.export_key()
         self.lisa_send(data_to_send)
         response = self.lisa_recv()
         if response != b'registered OK':
@@ -58,10 +58,14 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
         self.node_id = node_id
         self.wifi_ssid = ssid
         self.node_private_key = RSA.generate(2048)
+        self.node_public_key = self.node_private_key.publickey()
         self.get_user_input()
         with open(out_path, 'w') as fd:
             self.logger.info('Writing configuration to %s', out_path)
             fd.write(self.lisa_conf())
+        with open(os.path.join(self.PEERS_FOLDER, f'{node_id}.pub'), 'wb') as fd:
+            self.logger.info('Writing public key to %s', os.path.join(self.PEERS_FOLDER, f'{node_id}.pub'))
+            fd.write(self.node_public_key.export_key())
         self.logger.info('Registering %s to %s...', self.node_id, self.settings.get('dispatcher_name'))
         self.register_node()
         self.lisa_close()
@@ -70,9 +74,9 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
 
 def parse_arguments():
     parser = ArgumentParser(description='LISA configuration generator for ESP32 nodes.')
-    parser.add_argument('--node-id', '-i', help='Node ID for ESP32 node.', required=True)
-    parser.add_argument('--ssid', '-s', help='Wi-Fi SSID for ESP32 to connect.', required=True)
-    parser.add_argument('--output-dir','-o', help='Output folder for file lisa_conf.c.', default='.')
+    parser.add_argument('node_id', help='Node ID for ESP32 node.')
+    parser.add_argument('ssid', help='Wi-Fi SSID for ESP32 to connect.')
+    parser.add_argument('output_dir', help='Output folder for file lisa_conf.c.')
     return parser.parse_args(sys.argv[1:])
 
 if __name__ == "__main__":
