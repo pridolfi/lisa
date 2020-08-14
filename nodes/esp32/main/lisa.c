@@ -77,6 +77,7 @@ static QueueHandle_t lisa_send_queue, lisa_recv_queue;
 static void lisa_task_thread(void * a)
 {
     int rv;
+    TickType_t previous_wake;
 
     lisa_send_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
     if (!lisa_send_queue) {
@@ -88,9 +89,10 @@ static void lisa_task_thread(void * a)
 
     while(1) {
         rv = lisa_connect();
+        previous_wake = xTaskGetTickCount();
         while (rv >= 0) {
             bzero(queue_buf, sizeof(queue_buf));
-            if (!xQueueReceive(lisa_recv_queue, queue_buf, 100)) {
+            if (!xQueueReceive(lisa_recv_queue, queue_buf, 0)) {
                 snprintf((char *)queue_buf, sizeof(queue_buf), "uptime:%u", esp_log_timestamp());
             }
             rv = lisa_send(queue_buf, strlen((char *)queue_buf));
@@ -98,6 +100,7 @@ static void lisa_task_thread(void * a)
             if (rv > 0) {
                 ESP_LOGI(TAG, "lisa_recv: %d %s", rv, queue_buf);
             }
+            vTaskDelayUntil(&previous_wake, 100);
         }
         lisa_close();
         vTaskDelay(100);
@@ -112,7 +115,7 @@ int32_t lisa_connect(void)
     struct sockaddr_in source_addr; // Large enough for both IPv4 or IPv6
     socklen_t socklen = sizeof(source_addr);
     struct timeval timeout;      
-    timeout.tv_sec = 20;
+    timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
