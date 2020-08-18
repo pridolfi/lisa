@@ -39,7 +39,7 @@ class Dispatcher(Core):
 
 
     def process_data(self, recv_data, peername):
-        self.logger.info('%s: %s', peername, recv_data)
+        self.logger.debug('%s: %s', peername, recv_data)
         if recv_data.startswith(b'register:'):
             _, name, pubkey = recv_data.split(b':')
             name = name.decode()
