@@ -74,42 +74,7 @@ static QueueHandle_t lisa_send_queue, lisa_recv_queue;
 
 /*==================[internal functions definition]==========================*/
 
-static void lisa_task_thread(void * a)
-{
-    int rv;
-    TickType_t previous_wake;
-
-    lisa_send_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
-    if (!lisa_send_queue) {
-        ESP_LOGE(TAG, "error creating lisa_send_queue");
-        vTaskDelete(NULL);
-        return;
-    }
-    lisa_recv_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
-
-    while(1) {
-        rv = lisa_connect();
-        previous_wake = xTaskGetTickCount();
-        while (rv >= 0) {
-            bzero(queue_buf, sizeof(queue_buf));
-            if (!xQueueReceive(lisa_recv_queue, queue_buf, 0)) {
-                snprintf((char *)queue_buf, sizeof(queue_buf), "uptime:%u", esp_log_timestamp());
-            }
-            rv = lisa_send(queue_buf, strlen((char *)queue_buf));
-            rv = lisa_recv(queue_buf, sizeof(queue_buf));
-            if (rv > 0) {
-                ESP_LOGI(TAG, "lisa_recv: %d %s", rv, queue_buf);
-            }
-            vTaskDelayUntil(&previous_wake, 100);
-        }
-        lisa_close();
-        vTaskDelay(100);
-    }
-}
-
-/*==================[external functions definition]==========================*/
-
-int32_t lisa_connect(void)
+static int32_t lisa_connect(void)
 {
     size_t out_len;
     struct sockaddr_in source_addr; // Large enough for both IPv4 or IPv6
@@ -188,7 +153,7 @@ int32_t lisa_connect(void)
     return -1;
 }
 
-int32_t lisa_send(void * data, size_t len)
+static int32_t lisa_send(void * data, size_t len)
 {
     if ((data == NULL) || (len > LISA_AES_DATA_LEN)) {
         ESP_LOGE(TAG, "lisa_send: invalid data to send!");
@@ -213,7 +178,7 @@ int32_t lisa_send(void * data, size_t len)
     return ret;
 }
 
-int32_t lisa_recv(void * data, size_t len)
+static int32_t lisa_recv(void * data, size_t len)
 {
     if ((data == NULL) || (len == 0)) {
         ESP_LOGE(TAG, "lisa_send: invalid buffer parameters");
@@ -248,7 +213,7 @@ int32_t lisa_recv(void * data, size_t len)
     }
 }
 
-int32_t lisa_close(void)
+static int32_t lisa_close(void)
 {
     lisa_send("close", 5);
     ESP_LOGI(TAG, "lisa_close: Shutting down socket");
@@ -257,7 +222,42 @@ int32_t lisa_close(void)
     return 0;
 }
 
-int32_t lisa_task_start(void)
+static void lisa_task_thread(void * a)
+{
+    int rv;
+    TickType_t previous_wake;
+
+    lisa_send_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
+    if (!lisa_send_queue) {
+        ESP_LOGE(TAG, "error creating lisa_send_queue");
+        vTaskDelete(NULL);
+        return;
+    }
+    lisa_recv_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
+
+    while(1) {
+        rv = lisa_connect();
+        previous_wake = xTaskGetTickCount();
+        while (rv >= 0) {
+            bzero(queue_buf, sizeof(queue_buf));
+            if (!xQueueReceive(lisa_recv_queue, queue_buf, 0)) {
+                snprintf((char *)queue_buf, sizeof(queue_buf), "uptime:%u", esp_log_timestamp());
+            }
+            rv = lisa_send(queue_buf, strlen((char *)queue_buf));
+            rv = lisa_recv(queue_buf, sizeof(queue_buf));
+            if (rv > 0) {
+                ESP_LOGI(TAG, "lisa_recv: %d %s", rv, queue_buf);
+            }
+            vTaskDelayUntil(&previous_wake, 100);
+        }
+        lisa_close();
+        vTaskDelay(100);
+    }
+}
+
+/*==================[external functions definition]==========================*/
+
+int32_t lisa_start(void)
 {
     return xTaskCreate(lisa_task_thread, "lisa_task", LISA_STACK_SIZE, NULL, tskIDLE_PRIORITY+5, NULL);
 }

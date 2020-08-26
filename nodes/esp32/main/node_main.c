@@ -16,5 +16,5 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(wifi_connect());
-    ESP_LOGI(TAG, "lisa_task_start: %d", lisa_task_start());
+    ESP_LOGI(TAG, "lisa_start: %d", lisa_start());
 }

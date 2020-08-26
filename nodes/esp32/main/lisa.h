@@ -53,15 +53,7 @@ extern const short dispatcher_port;
 
 /*==================[external functions declaration]=========================*/
 
-int32_t lisa_connect(void);
-
-int32_t lisa_send(void * data, size_t len);
-
-int32_t lisa_recv(void * data, size_t len);
-
-int32_t lisa_close(void);
-
-int32_t lisa_task_start(void);
+int32_t lisa_start(void);
 
 /*==================[end of file]============================================*/
 #endif /* #ifndef LISA_H */
