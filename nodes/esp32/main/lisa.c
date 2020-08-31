@@ -1,33 +1,20 @@
-/* Copyright 2020, Pablo Ridolfi
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- */
+/*  
+    LISA - Main source file
+    Copyright (C) 2020 Pablo Ridolfi
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 
 /*==================[inclusions]=============================================*/
 
@@ -68,7 +55,7 @@ static struct sockaddr_in dest_addr;
 static uint8_t cipher_buf[MBEDTLS_MPI_MAX_SIZE];
 static uint8_t socket_buf[MBEDTLS_MPI_MAX_SIZE];
 static uint8_t queue_buf[LISA_QUEUE_ITEM_SIZE];
-static QueueHandle_t lisa_send_queue, lisa_recv_queue;
+static QueueHandle_t command_queue;
 
 /*==================[external data definition]===============================*/
 
@@ -227,20 +214,19 @@ static void lisa_task_thread(void * a)
     int rv;
     TickType_t previous_wake;
 
-    lisa_send_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
-    if (!lisa_send_queue) {
-        ESP_LOGE(TAG, "error creating lisa_send_queue");
+    command_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
+    if (!command_queue) {
+        ESP_LOGE(TAG, "error creating command_queue");
         vTaskDelete(NULL);
         return;
     }
-    lisa_recv_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
 
     while(1) {
         rv = lisa_connect();
         previous_wake = xTaskGetTickCount();
         while (rv >= 0) {
             bzero(queue_buf, sizeof(queue_buf));
-            if (!xQueueReceive(lisa_recv_queue, queue_buf, 0)) {
+            if (!xQueueReceive(command_queue, queue_buf, 0)) {
                 snprintf((char *)queue_buf, sizeof(queue_buf), "uptime:%u", esp_log_timestamp());
             }
             rv = lisa_send(queue_buf, strlen((char *)queue_buf));
