@@ -20,16 +20,6 @@ class NodeConfigGenerator(Node):
         self.start()
 
 
-    def register_node(self):
-        data_to_send = b'register:' + self.node_id.encode() + b':' + self.node_public_key.export_key()
-        self.lisa_send(data_to_send)
-        response = self.lisa_recv()
-        if response != b'registered OK':
-            self.logger.error('Error registering node to dispatcher.')
-        else:
-            self.logger.info(f'{self.node_id} registered successfully.')
-
-
     def get_user_input(self):
         self.wifi_passwd = getpass('Wi-Fi password: ')
         passwd2 = getpass('Wi-Fi password again: ')
@@ -71,7 +61,7 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
             self.logger.info('Writing public key to %s', os.path.join(self.PEERS_FOLDER, f'{node_id}.pub'))
             fd.write(self.node_public_key.export_key())
         self.logger.info('Registering %s to %s...', self.node_id, self.settings.get('dispatcher_name'))
-        self.register_node()
+        self.register_new_node(self.node_id, self.node_public_key)
         self.lisa_close()
         self.logger.info('Configuration written to %s', os.path.abspath(out_path))
 

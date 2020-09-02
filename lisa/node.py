@@ -133,3 +133,17 @@ class Node(Core):
 
     def send_command(self, command, handler):
         pass
+
+
+    def register_new_node(self, new_node_id, new_node_public_key):
+        if not self.is_connected():
+            return False
+        data_to_send = b'register:' + new_node_id.encode() + b':' + new_node_public_key.export_key()
+        self.lisa_send(data_to_send)
+        response = self.lisa_recv()
+        if response != b'registered OK':
+            self.logger.error('Error registering node to dispatcher.')
+            return False
+        else:
+            self.logger.info(f'{new_node_id} registered successfully.')
+            return True
