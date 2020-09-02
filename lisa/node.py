@@ -31,7 +31,6 @@ class Node(Core):
             self.logger.exception('exception setting dispatcher access, check your configuration! (%s)', str(ex))
             return
         self.thread = threading.Thread(target=self.__node_thread)
-        self.thread.start()
 
 
     def __node_thread(self):
@@ -107,14 +106,26 @@ class Node(Core):
         return recv_data
 
 
-    def lisa_send(self, data_to_send):
+    def __lisa_send(self, data_to_send):
         self.send_queue.put(data_to_send)
     
 
-    def lisa_recv(self, timeout_s=None):
+    def __lisa_recv(self, timeout_s=None):
         return self.recv_queue.get(timeout=timeout_s)
 
 
-    def lisa_close(self):
+    def __lisa_close(self):
         self.running = False
         self.thread.join()
+
+
+    def start(self):
+        return self.thread.start()
+
+
+    def register_command(self, command, handler):
+        pass
+
+
+    def send_command(self, command, handler):
+        pass

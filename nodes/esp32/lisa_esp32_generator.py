@@ -16,6 +16,7 @@ class NodeConfigGenerator(Node):
 
     def __init__(self):
         super().__init__()
+        self.start()
 
 
     def register_node(self):
