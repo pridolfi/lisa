@@ -123,6 +123,10 @@ class Node(Core):
         return self.thread.start()
 
 
+    def is_connected(self):
+        return self.aes_session_key is not None
+
+
     def register_command(self, command, handler):
         pass
 
