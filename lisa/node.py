@@ -106,15 +106,15 @@ class Node(Core):
         return recv_data
 
 
-    def __lisa_send(self, data_to_send):
+    def lisa_send(self, data_to_send):
         self.send_queue.put(data_to_send)
     
 
-    def __lisa_recv(self, timeout_s=None):
+    def lisa_recv(self, timeout_s=None):
         return self.recv_queue.get(timeout=timeout_s)
 
 
-    def __lisa_close(self):
+    def lisa_close(self):
         self.running = False
         self.thread.join()
 

@@ -4,6 +4,7 @@ LISA node configuration generator.
 '''
 import sys
 import os
+import time
 
 from argparse import ArgumentParser
 from getpass import getpass
@@ -60,6 +61,7 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
         self.wifi_ssid = ssid
         self.node_private_key = RSA.generate(2048)
         self.node_public_key = self.node_private_key.publickey()
+        time.sleep(1)
         self.get_user_input()
         with open(out_path, 'w') as fd:
             self.logger.info('Writing configuration to %s', out_path)
