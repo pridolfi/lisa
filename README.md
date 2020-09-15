@@ -44,3 +44,7 @@ pip install .
 # dispatcher example
 lisa_run.py dispatcher
 ```
+
+## TODOs
+
+See [issues](https://github.com/pridolfi/lisa/issues).
