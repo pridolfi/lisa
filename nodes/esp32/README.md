@@ -2,6 +2,8 @@
 
 ## Building
 
+- Use [`esp-idf`](https://github.com/espressif/esp-idf).
+
 Remember to create file `lisa_conf.c` declaring the following variables:
 
 - `const char node_id[]` hostname or node FQDN.

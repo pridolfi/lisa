@@ -4,7 +4,7 @@ Light Implementation of Secure Automation
 
 ## TL;DR
 
-LISA is a secure P2P data exchange library written in Python. It allows two or more peers (`nodes`) to exchange information using a third peer as a `dispatcher`. Each `node` can act also as a `dispatcher` to prevent centralization of messages. It uses RSA and AES encryption standards to verify identity and encrypt exchanged data.
+LISA is a secure P2P data exchange library written in Python and C (for its ESP32 port). It allows two or more peers (`nodes`) to exchange information using a third peer as a `dispatcher`. Each `node` can act also as a `dispatcher` to prevent centralization of messages. It uses RSA and AES encryption standards to verify identity and encrypt exchanged data.
 
 ## Functional description
 
@@ -37,66 +37,10 @@ git clone git@github.com:pridolfi/lisa.git
 cd lisa
 python3.7 -m venv venv
 . venv/bin/activate
-pip install cbor pycryptodome
+pip install -r requirements.txt
+pip install .
 ```
 ```bash
 # dispatcher example
-python ./lisa dispatcher 
-```
-```bash
-# node send example
-python ./lisa send dispatcher1.example.org node2 'hello!'
-```
-```bash
-# node receive example
-python ./lisa recv dispatcher1.example.org
-
-```
-
-## Basic usage
-
-### Dispatcher
-```python
-from lisa.dispatcher import Dispatcher
-
-# LISA uses your hostname to identify this node by default. Also you can specify it:
-d = Dispatcher(node_id='dispatcher1.example.org')
-
-# Start waiting for connections.
-# Default port is 5432.
-d.run_dispatcher(port=5432)
-```
-
-### Node 1
-```python
-from lisa.node import Node
-
-n = Node(node_id='node1')
-
-# exchange public keys with the dispatcher using SCP, just for the first time.
-n.scp_exchange_pubkeys('username@this.hostname.com:22')
-
-n.set_dispatcher('dispatcher1.example.org')
-
-dispatcher_msg = n.send_to_peer('node2', {'data':'hello node2!'})
-
-print(dispatcher_msg) # should say 'queued'
-
-```
-
-### Node 2
-```python
-from lisa.node import Node
-
-n = Node(node_id='node1')
-
-# exchange public keys with the dispatcher using SCP, just for the first time.
-n.scp_exchange_pubkeys('username@this.hostname.com:22')
-
-n.set_dispatcher('dispatcher1.example.org')
-
-response = n.recv_from_peer()
-
-print(response) # should print the message and its sender
-
+lisa_run.py dispatcher
 ```
