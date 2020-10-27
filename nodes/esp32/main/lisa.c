@@ -224,7 +224,7 @@ static void lisa_task_thread(void * a)
             bzero(message_buffer, sizeof(message_buffer));
             rv = lisa_recv(message_buffer, sizeof(message_buffer));
             if (rv > 0) {
-                ESP_LOGI(TAG, "lisa_recv: %d %s", rv, message_buffer);
+                ESP_LOGD(TAG, "lisa_recv: %d %s", rv, message_buffer);
                 if (!memcmp(message_buffer, "msg:", 4)) {
                     strncpy((char *)incoming_buffer, (char *)message_buffer+4, strlen((char *)message_buffer)-4);
                 }
