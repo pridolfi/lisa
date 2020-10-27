@@ -163,6 +163,16 @@ class Node(Core):
             self.logger.info(f'{new_node_id} registered successfully.')
 
 
+    def set_dispatcher(self, uri):
+        host, port, _ = self.parse_user_host_port(uri)
+        self.settings['dispatcher_name'] = host
+        if port:
+            self.settings['dispatcher_port'] = port
+        elif 'dispatcher_port' in self.settings:
+            del self.settings['dispatcher_port']
+        self.save_settings()
+
+
     def list_devices(self, timeout_s=None):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')

@@ -29,10 +29,16 @@ def register_to_remote(options):
     node = Node()
     node.scp_exchange_pubkeys(options.uri)
 
+def set_dispatcher(options):
+    from lisa.node import Node
+    node = Node()
+    node.set_dispatcher(options.uri)
+
 ACTIONS = {
     'dispatcher': run_dispatcher,
     'info': get_info,
-    'register': register_to_remote
+    'register': register_to_remote,
+    'set_dispatcher': set_dispatcher
 }
 
 def parse_arguments():

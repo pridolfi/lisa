@@ -18,6 +18,7 @@ class Core(object):
     def __init__(self):
         ''' Initialize class base members and load node keys. '''
         self.LISA_FOLDER = os.getenv('LISA_FOLDER', os.path.join(os.getenv('HOME'), '.lisa'))
+        self.settings_file = os.path.join(self.LISA_FOLDER, "settings.yaml")
         self.logger = logging.getLogger('LISA')
         self.logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
@@ -28,12 +29,11 @@ class Core(object):
 
 
     def load_settings(self):
-        settings_file = os.path.join(self.LISA_FOLDER, "settings.yaml")
         try:
-            with open(settings_file) as settings:
+            with open(self.settings_file) as settings:
                 self.settings = yaml.safe_load(settings)
         except FileNotFoundError:
-            self.logger.warning('settings file %s not found, using defaults', settings_file)
+            self.logger.warning('settings file %s not found, using defaults', self.settings_file)
             self.settings = dict()
         self.NODE_ID = self.settings.get('LISA_NODE_ID', socket.gethostname())
         self.PEERS_FOLDER = os.path.join(self.LISA_FOLDER, 'peers')
@@ -43,6 +43,11 @@ class Core(object):
         self.TIMEOUT_S = self.settings.get('TIMEOUT_S', 20)
         self.PACKET_SIZE_B = self.settings.get('PACKET_SIZE_B', 1024)
         os.system('mkdir -p {}'.format(self.PEERS_FOLDER))
+
+
+    def save_settings(self):
+        with open(self.settings_file, 'w') as fd:
+            yaml.dump(self.settings, fd)
 
 
     def load_keys(self):
