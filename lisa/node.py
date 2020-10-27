@@ -145,10 +145,10 @@ class Node(Core):
         return sender, message
 
 
-    def send_message(self, receiver, command):
+    def send_message(self, receiver, message):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
-        data_to_send = b'msg:' + receiver.encode() + b':' + command.encode()
+        data_to_send = b'msg:' + receiver.encode() + b':' + message.encode()
         self.send(data_to_send)
         response = self.recv()
         if response != b'message queued':
