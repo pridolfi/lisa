@@ -12,7 +12,7 @@ while not n.is_connected:
     print('waiting for connection...')
     time.sleep(1)
 
-if n.send_message('Inspiron15', 'hola mundo!'):
+if n.send_message(n.NODE_ID, 'hola mundo!'):
     print('message sent')
 
 rcv = n.recv_message()

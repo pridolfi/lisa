@@ -26,6 +26,7 @@ class Dispatcher(Core):
     def put_message(self, sender, receiver, message):
         if receiver not in self.messages:
             self.messages[receiver] = Queue()
+        self.logger.info('%s %s %s', receiver, sender, message)
         self.messages[receiver].put((sender, message))
 
 
