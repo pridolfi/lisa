@@ -33,6 +33,7 @@ def set_dispatcher(options):
     from lisa.node import Node
     node = Node()
     node.set_dispatcher(options.uri)
+    print('Dispatcher URI set.')
 
 ACTIONS = {
     'dispatcher': run_dispatcher,

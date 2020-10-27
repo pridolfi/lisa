@@ -24,6 +24,11 @@ class Node(Core):
         self.running = False
         self.is_connected = False
         self.UPTIME_BEACON_PERIOD_s = 1
+        self.thread = threading.Thread(target=self.__node_thread, daemon=True)
+
+
+    def __node_thread(self):
+        self.logger.debug('starting node session')
         try:
             self.dispatcher_addr = (
                 self.resolve(self.settings['dispatcher_name']),
@@ -31,13 +36,8 @@ class Node(Core):
             )
             self.dispatcher_pubkey = self.get_peer_key(self.settings.get('dispatcher_name'))
         except Exception as ex:
-            self.logger.exception('exception setting dispatcher access, check your configuration! (%s)', str(ex))
+            self.logger.warning('Error resolving dispatcher address, check your configuration! (%s)', str(ex))
             return
-        self.thread = threading.Thread(target=self.__node_thread)
-
-
-    def __node_thread(self):
-        self.logger.debug('starting node session')
         self.running = True
         while self.running:
             try:
