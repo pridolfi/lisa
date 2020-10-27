@@ -29,6 +29,7 @@
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
@@ -55,6 +56,7 @@ static struct sockaddr_in dest_addr;
 static uint8_t cipher_buf[MBEDTLS_MPI_MAX_SIZE];
 static uint8_t socket_buf[MBEDTLS_MPI_MAX_SIZE];
 static uint8_t queue_buf[LISA_QUEUE_ITEM_SIZE];
+static uint8_t out_buf[LISA_QUEUE_ITEM_SIZE];
 static QueueHandle_t command_queue;
 
 /*==================[external data definition]===============================*/
@@ -209,6 +211,24 @@ static int32_t lisa_close(void)
     return 0;
 }
 
+static int32_t process_payload()
+{
+    int32_t rv = 0;
+
+    if (memcmp(queue_buf, "cmd:", 4) == 0) {
+        int32_t i = 0;
+        while(lisa_commands[i].command != NULL) {
+            if (!strcmp(lisa_commands[i].command, (char*)queue_buf+4)) {
+                lisa_commands[i].handler((int8_t*)queue_buf+4, (int8_t*)out_buf);
+                rv = strlen((char *)out_buf);
+                break;
+            }
+            i++;
+        }
+    }
+    return rv;
+}
+
 static void lisa_task_thread(void * a)
 {
     int rv;
@@ -233,6 +253,12 @@ static void lisa_task_thread(void * a)
             rv = lisa_recv(queue_buf, sizeof(queue_buf));
             if (rv > 0) {
                 ESP_LOGI(TAG, "lisa_recv: %d %s", rv, queue_buf);
+                rv = process_payload();
+                if (rv > 0) {
+                    rv = lisa_send(out_buf, rv);
+                    rv = lisa_recv(queue_buf, sizeof(queue_buf));
+                    ESP_LOGI(TAG, "lisa_cmd_rsp: %d %s", rv, queue_buf);
+                }
             }
             vTaskDelayUntil(&previous_wake, 100);
         }

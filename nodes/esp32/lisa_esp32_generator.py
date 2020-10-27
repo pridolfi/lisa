@@ -24,7 +24,7 @@ class NodeConfigGenerator(Node):
         self.wifi_passwd = getpass('Wi-Fi password: ')
         passwd2 = getpass('Wi-Fi password again: ')
         if self.wifi_passwd != passwd2:
-            self.lisa_close()
+            self.close()
             raise ValueError('Passwords do not match!')
 
 
@@ -51,7 +51,7 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
         self.wifi_ssid = ssid
         self.node_private_key = RSA.generate(2048)
         self.node_public_key = self.node_private_key.publickey()
-        while not self.is_connected():
+        while not self.is_connected:
             time.sleep(1)
         self.get_user_input()
         with open(out_path, 'w') as fd:
@@ -62,7 +62,7 @@ const char wifi_passwd[] = "{self.wifi_passwd}";
             fd.write(self.node_public_key.export_key())
         self.logger.info('Registering %s to %s...', self.node_id, self.settings.get('dispatcher_name'))
         self.register_new_node(self.node_id, self.node_public_key)
-        self.lisa_close()
+        self.close()
         self.logger.info('Configuration written to %s', os.path.abspath(out_path))
 
 

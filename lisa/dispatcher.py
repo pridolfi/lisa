@@ -19,23 +19,24 @@ class Dispatcher(Core):
         super().__init__()
         self.s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.active_clients = {}
-        self.node_messages = {}
+        self.messages = {}
         self.decipher_rsa = PKCS1_v1_5.new(self.private_key)
 
 
-    def put_message(self, receiver, payload):
-        if receiver not in self.node_messages:
-            self.node_messages[receiver] = Queue()
-        self.node_messages[receiver].put(payload)
+    def put_message(self, sender, receiver, message):
+        if receiver not in self.messages:
+            self.messages[receiver] = Queue()
+        self.messages[receiver].put((sender, message))
 
 
-    def get_message(self, host):
-        rv = None
+    def get_message(self, receiver):
+        if receiver not in self.messages:
+            return None
         try:
-            rv = self.node_messages[host].get(block=False)
-        except Exception:
-            pass
-        return rv
+            sender, message = self.messages[receiver].get_nowait()
+            return b'msg:' + sender + b':' + message
+        except Empty:
+            return None
 
 
     def process_data(self, recv_data, peername):
@@ -46,8 +47,19 @@ class Dispatcher(Core):
             self.logger.info('registering %s', name)
             with open(os.path.join(self.PEERS_FOLDER, f'{name}.pub'), 'wb') as fd:
                 fd.write(pubkey)
-            return b'registered OK'            
-        return recv_data
+            return b'registered OK'
+
+        if recv_data.startswith(b'msg:'):
+            _, receiver, message = recv_data.split(b':')
+            self.put_message(peername, receiver, message)
+            return b'message queued'
+
+        response = self.get_message(peername)
+
+        if response == None:
+            return recv_data
+        else:
+            return response
 
 
     def session_thread(self, address):

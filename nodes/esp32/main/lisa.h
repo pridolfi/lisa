@@ -36,9 +36,9 @@
  * user can return a response using the response parameter
  * 
  */
-typedef int32_t (*command_handler_t)(void * params, size_t params_len, void * response, size_t * response_len);
+typedef int32_t (*command_handler_t)(int8_t * params, int8_t * response);
 
-
+/** @brief lisa command structure */
 typedef struct {
     const char * command;
     command_handler_t handler;
@@ -58,8 +58,6 @@ extern const lisa_command_t lisa_commands[];
 /*==================[external functions declaration]=========================*/
 
 int32_t lisa_start(void);
-
-int32_t lisa_send_command(const char * remote_id, const char * command, void * request, size_t request_len);
 
 /*==================[end of file]============================================*/
 #endif /* #ifndef LISA_H */

@@ -21,6 +21,8 @@ class Node(Core):
         self.send_queue = Queue()
         self.recv_queue = Queue()
         self.running = False
+        self.is_connected = False
+        self.UPTIME_BEACON_PERIOD_s = 1
         try:
             self.dispatcher_addr = (
                 self.resolve(self.settings['dispatcher_name']),
@@ -39,20 +41,26 @@ class Node(Core):
         while self.running:
             try:
                 self.__lisa_connect()
+                start = time.monotonic()
                 while self.running:
-                    if self.send_queue.empty():
-                        uptime_ms = int(time.monotonic()*1000)
+                    data_to_send = None
+                    uptime_message = ''
+                    if not self.send_queue.empty():
+                        data_to_send = self.send_queue.get_nowait()
+                    elif time.monotonic() >= (start + self.UPTIME_BEACON_PERIOD_s):
                         start = time.monotonic()
-                        self.__lisa_send(f'uptime:{uptime_ms}'.encode())
-                        uptime_response = self.__lisa_recv()
-                        self.logger.debug(f'uptime response: {uptime_response}')
-                        end = time.monotonic()
-                        t = end - start
-                        time.sleep(1-t if t < 1 else 1)
-                    else:
-                        data_to_send = self.send_queue.get()
+                        uptime_ms = int(start*1000)
+                        uptime_message = f'uptime:{uptime_ms}'.encode()
+                        data_to_send = uptime_message
+                    if data_to_send:
                         self.__lisa_send(data_to_send)
-                        self.recv_queue.put(self.__lisa_recv())
+                        response = self.__lisa_recv()
+                        if response != uptime_message:
+                            self.recv_queue.put(response)
+                        else:
+                            end = time.monotonic()
+                            t = end - start
+                            time.sleep(1-t if t < 1 else 1)
             except Exception as ex:
                 self.logger.exception(str(ex))
                 time.sleep(1)
@@ -76,6 +84,7 @@ class Node(Core):
         self.logger.info('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
         self.aes_session_key = session_data[0:16]
         self.aes_session_iv = session_data[16:32]
+        self.is_connected = True
 
 
     def __lisa_close(self):
@@ -83,6 +92,7 @@ class Node(Core):
         recv_data = self.__lisa_recv()
         if recv_data != b'close':
             self.logger.warning('received %s', recv_data)
+        self.is_connected = False
         self.aes_session_key = None
         self.aes_session_iv = None
         self.running = False
@@ -106,15 +116,15 @@ class Node(Core):
         return recv_data
 
 
-    def lisa_send(self, data_to_send):
+    def send(self, data_to_send):
         self.send_queue.put(data_to_send)
-    
 
-    def lisa_recv(self, timeout_s=None):
+
+    def recv(self, timeout_s=None):
         return self.recv_queue.get(timeout=timeout_s)
 
 
-    def lisa_close(self):
+    def close(self):
         self.running = False
         self.thread.join()
 
@@ -123,24 +133,33 @@ class Node(Core):
         return self.thread.start()
 
 
-    def is_connected(self):
-        return self.aes_session_key is not None
+    def recv_message(self):
+        if not self.is_connected:
+            raise ConnectionError('Node is not connected!')
+        self.send(b'get_message')
+        response = self.recv()
+        sender, message = response.split(b':')
+        return sender, message
 
 
-    def register_command(self, command, handler):
-        pass
-
-
-    def send_command(self, command, handler):
-        pass
+    def send_message(self, receiver, command):
+        if not self.is_connected:
+            raise ConnectionError('Node is not connected!')
+        data_to_send = b'msg:' + receiver.encode() + b':' + command.encode()
+        self.send(data_to_send)
+        response = self.recv()
+        if response != b'message queued':
+            self.logger.error('Error sending message: %s', response)
+            return False
+        return True
 
 
     def register_new_node(self, new_node_id, new_node_public_key):
-        if not self.is_connected():
-            return False
+        if not self.is_connected:
+            raise ConnectionError('Node is not connected!')
         data_to_send = b'register:' + new_node_id.encode() + b':' + new_node_public_key.export_key()
-        self.lisa_send(data_to_send)
-        response = self.lisa_recv()
+        self.send(data_to_send)
+        response = self.recv()
         if response != b'registered OK':
             self.logger.error('Error registering node to dispatcher.')
             return False

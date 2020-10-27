@@ -34,7 +34,7 @@
 
 /*==================[internal functions declaration]=========================*/
 
-static int32_t hello_handler(void * params, size_t params_len, void * response, size_t * response_len);
+static int32_t hello_handler(int8_t * params, int8_t * response);
 
 /*==================[internal data definition]===============================*/
 
@@ -49,12 +49,11 @@ const lisa_command_t lisa_commands[] = {
 
 /*==================[internal functions definition]==========================*/
 
-static int32_t hello_handler(void * params, size_t params_len, void * response, size_t * response_len)
+static int32_t hello_handler(int8_t * params, int8_t * response)
 {
     const char resp[] = "world!";
-    const size_t resp_len = strlen(resp);
-    ESP_LOGI(TAG, "hello_handler: %u %s", params_len, (char *)params);
-    memcpy(response, resp, resp_len > *response_len ? *response_len : resp_len);
+    ESP_LOGI(TAG, "hello_handler: %s", (char *)params);
+    memcpy(response, resp, strlen(resp)+1);
     return 0;
 }
 
