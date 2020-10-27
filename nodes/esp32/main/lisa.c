@@ -221,6 +221,7 @@ static void lisa_task_thread(void * a)
                 snprintf((char *)message_buffer, sizeof(message_buffer), "uptime:%u", esp_log_timestamp());
             }
             rv = lisa_send(message_buffer, strlen((char *)message_buffer));
+            bzero(message_buffer, sizeof(message_buffer));
             rv = lisa_recv(message_buffer, sizeof(message_buffer));
             if (rv > 0) {
                 ESP_LOGI(TAG, "lisa_recv: %d %s", rv, message_buffer);
