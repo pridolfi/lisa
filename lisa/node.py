@@ -37,7 +37,7 @@ class Node(Core):
 
 
     def __node_thread(self):
-        self.logger.info('starting node session')
+        self.logger.debug('starting node session')
         self.running = True
         while self.running:
             try:
@@ -66,7 +66,7 @@ class Node(Core):
                 self.logger.exception(str(ex))
                 time.sleep(1)
         self.__lisa_close()
-        self.logger.info('ending node session')
+        self.logger.debug('ending node session')
 
 
     def __lisa_connect(self):
@@ -82,7 +82,7 @@ class Node(Core):
         session_data = decipher_rsa.decrypt(recv_data, sentinel)
         if len(session_data) != 32:
             raise ConnectionError("error receiving session key")
-        self.logger.info('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
+        self.logger.debug('connected to %s:%s', self.settings.get('dispatcher_name'), self.dispatcher_addr[1])
         self.aes_session_key = session_data[0:16]
         self.aes_session_iv = session_data[16:32]
         self.is_connected = True
