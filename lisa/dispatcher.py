@@ -26,7 +26,6 @@ class Dispatcher(Core):
     def put_message(self, sender, receiver, message):
         if receiver not in self.messages:
             self.messages[receiver] = Queue()
-        self.logger.info('%s %s %s', receiver, sender, message)
         self.messages[receiver].put((sender, message))
 
 
@@ -54,6 +53,7 @@ class Dispatcher(Core):
 
         if recv_data.startswith(b'msg:'):
             _, receiver, message = recv_data.split(b':')
+            receiver = receiver.decode('utf-8')
             self.put_message(peername, receiver, message)
             return b'message queued'
 
