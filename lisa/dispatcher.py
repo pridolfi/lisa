@@ -5,7 +5,7 @@ LISA Dispatcher (server) class.
 import socket
 import threading
 import os
-from datetime import datetime
+import time
 
 from queue import Queue, Empty
 from Crypto.Cipher import AES, PKCS1_v1_5
@@ -67,8 +67,8 @@ class Dispatcher(Core):
         if recv_data.startswith(b'uptime:'):
             if not peername in self.devices:
                 self.devices[peername] = {}
-            self.devices[peername]['uptime'] = float(recv_data.split(b':')[1])
-            self.devices[peername]['last_seen'] = datetime.now()
+            self.devices[peername]['uptime'] = int(recv_data.split(b':')[1])
+            self.devices[peername]['last_seen'] = time.time()
 
         response = self.get_message(peername)
 

@@ -8,6 +8,9 @@ n = Node()
 
 n.start(wait_for_connection=True)
 
+print('list devices:')
+print(n.list_devices())
+
 n.send_message('esp32-01', 'Hello, ESP!')
 print('message sent, waiting for response ...')
 

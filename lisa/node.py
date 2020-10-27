@@ -6,7 +6,7 @@ import socket
 import threading
 import time
 from queue import Queue
-import json
+from ast import literal_eval
 
 from Crypto.Cipher import AES, PKCS1_v1_5
 
@@ -169,4 +169,4 @@ class Node(Core):
         self.send_queue.put(b'list_devices')
         response = self.recv_queue.get(timeout=timeout_s)
         response = response.decode()
-        return json.loads(response)
+        return literal_eval(response)
