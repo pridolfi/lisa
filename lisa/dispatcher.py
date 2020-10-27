@@ -47,6 +47,14 @@ class Dispatcher(Core):
 
     def process_data(self, recv_data, peername):
         self.logger.debug('%s: %s', peername, recv_data)
+
+        if not peername in self.devices:
+            self.devices[peername] = {}
+        self.devices[peername]['last_seen'] = time.time()
+
+        if recv_data.startswith(b'uptime:'):
+            self.devices[peername]['uptime'] = int(recv_data.split(b':')[1])
+
         if recv_data.startswith(b'register:'):
             _, name, pubkey = recv_data.split(b':')
             name = name.decode()
@@ -63,12 +71,6 @@ class Dispatcher(Core):
 
         if recv_data == b'list_devices':
             return self.list_devices()
-
-        if recv_data.startswith(b'uptime:'):
-            if not peername in self.devices:
-                self.devices[peername] = {}
-            self.devices[peername]['uptime'] = int(recv_data.split(b':')[1])
-            self.devices[peername]['last_seen'] = time.time()
 
         response = self.get_message(peername)
 
