@@ -140,7 +140,7 @@ class Node(Core):
             raise ConnectionError('Node is not connected!')
         response = self.recv()
         header, sender, message = response.split(b':')
-        if header != b'rsp':
+        if header != b'msg':
             raise ValueError(f'Bad response from dispatcher: {response}')
         return sender, message
 
@@ -152,9 +152,7 @@ class Node(Core):
         self.send(data_to_send)
         response = self.recv()
         if response != b'message queued':
-            self.logger.error('Error sending message: %s', response)
-            return False
-        return True
+            raise ValueError(f'Bad response from dispatcher: {response}')
 
 
     def register_new_node(self, new_node_id, new_node_public_key):
@@ -164,8 +162,6 @@ class Node(Core):
         self.send(data_to_send)
         response = self.recv()
         if response != b'registered OK':
-            self.logger.error('Error registering node to dispatcher.')
-            return False
+            raise ValueError(f'Bad response from dispatcher: {response}')
         else:
             self.logger.info(f'{new_node_id} registered successfully.')
-            return True
