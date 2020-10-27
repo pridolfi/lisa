@@ -5,6 +5,7 @@ LISA Dispatcher (server) class.
 import socket
 import threading
 import os
+from datetime import datetime
 
 from queue import Queue, Empty
 from Crypto.Cipher import AES, PKCS1_v1_5
@@ -19,6 +20,7 @@ class Dispatcher(Core):
         super().__init__()
         self.s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.active_clients = {}
+        self.devices = {}
         self.messages = {}
         self.decipher_rsa = PKCS1_v1_5.new(self.private_key)
 
@@ -39,6 +41,10 @@ class Dispatcher(Core):
             return None
 
 
+    def list_devices(self):
+        return str(self.devices).encode()
+
+
     def process_data(self, recv_data, peername):
         self.logger.debug('%s: %s', peername, recv_data)
         if recv_data.startswith(b'register:'):
@@ -54,6 +60,15 @@ class Dispatcher(Core):
             receiver = receiver.decode('utf-8')
             self.put_message(peername, receiver, message)
             return b'message queued'
+
+        if recv_data == b'list_devices':
+            return self.list_devices()
+
+        if recv_data.startswith(b'uptime:'):
+            if not peername in self.devices:
+                self.devices[peername] = {}
+            self.devices[peername]['uptime'] = float(recv_data.split(b':')[1])
+            self.devices[peername]['last_seen'] = datetime.now()
 
         response = self.get_message(peername)
 

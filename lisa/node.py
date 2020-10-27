@@ -6,6 +6,7 @@ import socket
 import threading
 import time
 from queue import Queue
+import json
 
 from Crypto.Cipher import AES, PKCS1_v1_5
 
@@ -65,7 +66,7 @@ class Node(Core):
                 self.logger.exception(str(ex))
                 time.sleep(1)
         self.__lisa_close()
-        self.logger.info('ending node thread')
+        self.logger.info('ending node session')
 
 
     def __lisa_connect(self):
@@ -118,50 +119,54 @@ class Node(Core):
         return recv_data
 
 
-    def send(self, data_to_send):
-        self.send_queue.put(data_to_send)
-
-
-    def recv(self, timeout_s=None):
-        return self.recv_queue.get(timeout=timeout_s)
-
-
     def close(self):
         self.running = False
         self.thread.join()
 
 
-    def start(self):
-        return self.thread.start()
+    def start(self, wait_for_connection=False):
+        self.thread.start()
+        while wait_for_connection and not self.is_connected:
+            self.logger.debug('waiting for connection...')
+            time.sleep(1)
 
 
-    def recv_message(self):
+    def recv_message(self, timeout_s=None):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
-        response = self.recv()
+        response = self.recv_queue.get(timeout=timeout_s)
         header, sender, message = response.split(b':')
         if header != b'msg':
             raise ValueError(f'Bad response from dispatcher: {response}')
         return sender, message
 
 
-    def send_message(self, receiver, message):
+    def send_message(self, receiver, message, timeout_s=None):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         data_to_send = b'msg:' + receiver.encode() + b':' + message.encode()
-        self.send(data_to_send)
-        response = self.recv()
+        self.send_queue.put(data_to_send)
+        response = self.recv_queue.get(timeout=timeout_s)
         if response != b'message queued':
             raise ValueError(f'Bad response from dispatcher: {response}')
 
 
-    def register_new_node(self, new_node_id, new_node_public_key):
+    def register_new_node(self, new_node_id, new_node_public_key, timeout_s=None):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         data_to_send = b'register:' + new_node_id.encode() + b':' + new_node_public_key.export_key()
-        self.send(data_to_send)
-        response = self.recv()
+        self.send_queue.put(data_to_send)
+        response = self.recv_queue.get(timeout=timeout_s)
         if response != b'registered OK':
             raise ValueError(f'Bad response from dispatcher: {response}')
         else:
             self.logger.info(f'{new_node_id} registered successfully.')
+
+
+    def list_devices(self, timeout_s=None):
+        if not self.is_connected:
+            raise ConnectionError('Node is not connected!')
+        self.send_queue.put(b'list_devices')
+        response = self.recv_queue.get(timeout=timeout_s)
+        response = response.decode()
+        return json.loads(response)

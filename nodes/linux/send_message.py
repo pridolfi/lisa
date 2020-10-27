@@ -6,16 +6,12 @@ from lisa.node import Node
 
 n = Node()
 
-n.start()
-
-while not n.is_connected:
-    print('waiting for connection...')
-    time.sleep(1)
+n.start(wait_for_connection=True)
 
 n.send_message('esp32-01', 'Hello, ESP!')
+print('message sent, waiting for response ...')
 
 rcv = n.recv_message()
-
-print(rcv)
+print(f'message received from {rcv[0].decode()}: {rcv[1].decode()}')
 
 n.close()
