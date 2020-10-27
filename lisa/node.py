@@ -139,7 +139,9 @@ class Node(Core):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         response = self.recv()
-        sender, message = response.split(b':')
+        header, sender, message = response.split(b':')
+        if header != b'rsp':
+            raise ValueError(f'Bad response from dispatcher: {response}')
         return sender, message
 
 

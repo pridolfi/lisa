@@ -34,7 +34,7 @@ class Dispatcher(Core):
             return None
         try:
             sender, message = self.messages[receiver].get_nowait()
-            return b'msg:' + sender.encode() + b':' + message
+            return b'rsp:' + sender.encode() + b':' + message
         except Empty:
             return None
 
