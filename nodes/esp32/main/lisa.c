@@ -38,8 +38,6 @@
 /*==================[macros and definitions]=================================*/
 
 #define LISA_AES_DATA_LEN MBEDTLS_MPI_MAX_SIZE
-#define LISA_QUEUE_ITEM_COUNT (2)
-#define LISA_QUEUE_ITEM_SIZE  LISA_AES_DATA_LEN
 #define LISA_STACK_SIZE (4096)
 
 /*==================[internal data declaration]==============================*/
@@ -55,9 +53,8 @@ static int sock;
 static struct sockaddr_in dest_addr;
 static uint8_t cipher_buf[MBEDTLS_MPI_MAX_SIZE];
 static uint8_t socket_buf[MBEDTLS_MPI_MAX_SIZE];
-static uint8_t queue_buf[LISA_QUEUE_ITEM_SIZE];
-static uint8_t out_buf[LISA_QUEUE_ITEM_SIZE];
-static QueueHandle_t command_queue;
+static uint8_t incoming_buffer[MBEDTLS_MPI_MAX_SIZE];
+static uint8_t message_buffer[MBEDTLS_MPI_MAX_SIZE];
 
 /*==================[external data definition]===============================*/
 
@@ -211,55 +208,27 @@ static int32_t lisa_close(void)
     return 0;
 }
 
-static int32_t process_payload()
-{
-    int32_t rv = 0;
-
-    if (memcmp(queue_buf, "cmd:", 4) == 0) {
-        int32_t i = 0;
-        while(lisa_commands[i].command != NULL) {
-            if (!strcmp(lisa_commands[i].command, (char*)queue_buf+4)) {
-                lisa_commands[i].handler((int8_t*)queue_buf+4, (int8_t*)out_buf);
-                rv = strlen((char *)out_buf);
-                break;
-            }
-            i++;
-        }
-    }
-    return rv;
-}
-
 static void lisa_task_thread(void * a)
 {
     int rv;
     TickType_t previous_wake;
 
-    command_queue = xQueueCreate(LISA_QUEUE_ITEM_COUNT, LISA_QUEUE_ITEM_SIZE);
-    if (!command_queue) {
-        ESP_LOGE(TAG, "error creating command_queue");
-        vTaskDelete(NULL);
-        return;
-    }
-
     while(1) {
         rv = lisa_connect();
         previous_wake = xTaskGetTickCount();
         while (rv >= 0) {
-            bzero(queue_buf, sizeof(queue_buf));
-            if (!xQueueReceive(command_queue, queue_buf, 0)) {
-                snprintf((char *)queue_buf, sizeof(queue_buf), "uptime:%u", esp_log_timestamp());
+            if (!message_buffer[0]) {
+                snprintf((char *)message_buffer, sizeof(message_buffer), "uptime:%u", esp_log_timestamp());
             }
-            rv = lisa_send(queue_buf, strlen((char *)queue_buf));
-            rv = lisa_recv(queue_buf, sizeof(queue_buf));
+            rv = lisa_send(message_buffer, strlen((char *)message_buffer));
+            rv = lisa_recv(message_buffer, sizeof(message_buffer));
             if (rv > 0) {
-                ESP_LOGI(TAG, "lisa_recv: %d %s", rv, queue_buf);
-                rv = process_payload();
-                if (rv > 0) {
-                    rv = lisa_send(out_buf, rv);
-                    rv = lisa_recv(queue_buf, sizeof(queue_buf));
-                    ESP_LOGI(TAG, "lisa_cmd_rsp: %d %s", rv, queue_buf);
+                ESP_LOGI(TAG, "lisa_recv: %d %s", rv, message_buffer);
+                if (!memcmp(message_buffer, "msg:", 4)) {
+                    strncpy((char *)incoming_buffer, (char *)message_buffer+4, strlen((char *)message_buffer)-4);
                 }
             }
+            bzero(message_buffer, sizeof(message_buffer));
             vTaskDelayUntil(&previous_wake, 100);
         }
         lisa_close();
@@ -268,6 +237,26 @@ static void lisa_task_thread(void * a)
 }
 
 /*==================[external functions definition]==========================*/
+
+int32_t lisa_send_message(char * receiver, char * message)
+{
+    if (!message_buffer[0]) {
+        snprintf((char *)message_buffer, sizeof(message_buffer), "msg:%s:%s", receiver, message); 
+        return 0;
+    }
+    return -1;
+}
+
+int32_t lisa_recv_message(char * sender, size_t sender_size, char * message, size_t message_size)
+{
+    if (incoming_buffer[0]) {
+        strncpy(sender, strtok((char *)incoming_buffer, ":"), sender_size);
+        strncpy(message, strtok(NULL, ":"), message_size);
+        bzero(incoming_buffer, sizeof(incoming_buffer));
+        return 0;
+    }
+    return -1;
+}
 
 int32_t lisa_start(void)
 {

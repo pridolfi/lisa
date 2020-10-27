@@ -34,38 +34,34 @@
 
 /*==================[internal functions declaration]=========================*/
 
-static int32_t hello_handler(int8_t * params, int8_t * response);
-
 /*==================[internal data definition]===============================*/
 
 static const char *TAG = node_id;
 
 /*==================[external data definition]===============================*/
 
-const lisa_command_t lisa_commands[] = {
-    {"hello", hello_handler},
-    {NULL, NULL}
-};
-
 /*==================[internal functions definition]==========================*/
-
-static int32_t hello_handler(int8_t * params, int8_t * response)
-{
-    const char resp[] = "world!";
-    ESP_LOGI(TAG, "hello_handler: %s", (char *)params);
-    memcpy(response, resp, strlen(resp)+1);
-    return 0;
-}
 
 /*==================[external functions definition]==========================*/
 
 void app_main(void)
 {
+    char from[32];
+    char msg[128];
+
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(wifi_connect());
     ESP_LOGI(TAG, "lisa_start: %d", lisa_start());
+
+    while (1) {
+        if (!lisa_recv_message(from, 32, msg, 128)) {
+            ESP_LOGI(TAG, "message from %s: %s", from, msg);
+            lisa_send_message(from, "Hi! How are you?");
+        }
+        vTaskDelay(10);
+    }
 }
 
 /*==================[end of file]============================================*/

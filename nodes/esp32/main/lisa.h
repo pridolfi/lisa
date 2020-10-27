@@ -28,22 +28,6 @@
 
 /*==================[typedef]================================================*/
 
-/**
- * @brief command handler
- * 
- * this handler is executed when the corresponded command is received
- * 
- * user can return a response using the response parameter
- * 
- */
-typedef int32_t (*command_handler_t)(int8_t * params, int8_t * response);
-
-/** @brief lisa command structure */
-typedef struct {
-    const char * command;
-    command_handler_t handler;
-} lisa_command_t;
-
 /*==================[external data declaration]==============================*/
 
 /*==================[configuration data declaration]=========================*/
@@ -53,11 +37,12 @@ extern const unsigned char node_private_key[];
 extern const unsigned char dispatcher_public_key[];
 extern const char dispatcher_ip[];
 extern const short dispatcher_port;
-extern const lisa_command_t lisa_commands[];
 
 /*==================[external functions declaration]=========================*/
 
 int32_t lisa_start(void);
+int32_t lisa_send_message(char * receiver, char * message);
+int32_t lisa_recv_message(char * sender, size_t sender_size, char * message, size_t message_size);
 
 /*==================[end of file]============================================*/
 #endif /* #ifndef LISA_H */

@@ -12,12 +12,10 @@ while not n.is_connected:
     print('waiting for connection...')
     time.sleep(1)
 
-if n.send_message(n.NODE_ID, 'hola mundo!'):
-    print('message sent')
+n.send_message('esp32-01', 'Hello, ESP!')
 
 rcv = n.recv_message()
 
 print(rcv)
 
 n.close()
-
