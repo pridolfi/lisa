@@ -30,10 +30,12 @@ class Dispatcher(Core):
 
 
     def get_message(self, receiver):
+        self.logger.info(receiver)
         if receiver not in self.messages:
             return None
         try:
             sender, message = self.messages[receiver].get_nowait()
+            self.logger.info('%s %s', sender, message)
             return b'msg:' + sender + b':' + message
         except Empty:
             return None

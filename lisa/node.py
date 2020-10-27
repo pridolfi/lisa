@@ -99,6 +99,7 @@ class Node(Core):
 
 
     def __lisa_send(self, data_to_send):
+        self.logger.info('data_to_send: %s', data_to_send)
         cipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
         length = 16 - (len(data_to_send) % 16)
         data_to_send += bytes([length])*length
@@ -113,6 +114,7 @@ class Node(Core):
         decipher_aes = AES.new(self.aes_session_key, AES.MODE_CBC, self.aes_session_iv)
         recv_data = decipher_aes.decrypt(recv_data)
         recv_data = recv_data[:-recv_data[-1]]
+        self.logger.info('recv_data: %s', recv_data)
         return recv_data
 
 
@@ -136,7 +138,6 @@ class Node(Core):
     def recv_message(self):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
-        self.send(b'get_message')
         response = self.recv()
         sender, message = response.split(b':')
         return sender, message
