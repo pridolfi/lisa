@@ -58,7 +58,8 @@ void app_main(void)
     while (1) {
         if (!lisa_recv_message(from, 32, msg, 128)) {
             ESP_LOGI(TAG, "message from %s: %s", from, msg);
-            lisa_send_message(from, "Hi! How are you?");
+            snprintf(msg, 128, "Hi, %s, how are you?", from);
+            lisa_send_message(from, msg);
         }
         vTaskDelay(10);
     }

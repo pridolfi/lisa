@@ -3,7 +3,7 @@
 import time
 from lisa.node import Node
 
-destination = 'Inspiron15'
+destination = 'esp32-01'
 
 n = Node()
 
