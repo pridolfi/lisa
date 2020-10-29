@@ -96,6 +96,12 @@ class Node(Core):
         self.aes_session_key = None
         self.aes_session_iv = None
         self.running = False
+        while not self.recv_queue.empty():
+            data = self.recv_queue.get_nowait()
+            self.logger.warning('emptying recv_queue: %s', data)
+        while not self.send_queue.empty():
+            data = self.send_queue.get_nowait()
+            self.logger.warning('emptying send_queue: %s', data)
 
 
     def __lisa_send(self, data_to_send):
