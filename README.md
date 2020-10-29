@@ -4,7 +4,7 @@ Light Implementation of Secure Automation
 
 ## TL;DR
 
-LISA is a secure P2P data exchange library written in Python and C (for its ESP32 port). It allows two or more peers (`nodes`) to exchange information using a third peer as a `dispatcher`. Each `node` can act also as a `dispatcher` to prevent centralization of messages. It uses RSA and AES encryption standards to verify identity and encrypt exchanged data.
+LISA is a secure P2P data exchange library written in Python and C (for its ESP32 port). It allows two or more peers (`nodes`) to exchange messages using a third peer as a `dispatcher`. Each `node` can act also as a `dispatcher` to prevent centralization of messages. It uses RSA and AES encryption standards to verify identity and encrypt exchanged data.
 
 ## Functional description
 
@@ -20,17 +20,42 @@ The communication beteween each `node` and a `dispatcher` is established followi
 
 ## Installation
 
-```bash
+### Linux
+
+```shell
 git clone git@github.com:pridolfi/lisa.git
 cd lisa
-python3.7 -m venv venv
+python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
 pip install .
 ```
-```bash
-# dispatcher example
+
+## Usage
+
+### Linux - dispatcher
+
+- Use within created virtualenv.
+
+```shell
 lisa_run.py dispatcher
+```
+
+### Linux - node
+
+- Set dispatcher to communicate to, just for the first time.
+```shell
+lisa_run.py set_dispatcher --uri dispatcher.example.org:5432 # port is optional
+```
+
+- Register to dispatcher using `scp` for public keys exchange, just for the first time.
+```shell
+lisa_run.py register --uri user@dispatcher.example.org:5432 # set user and port if required for SSH access
+```
+
+- Test
+```shell
+./nodes/linux/examples/list_devices.py # lists devices seen by dispatcher
 ```
 
 ## Supported platforms
