@@ -140,7 +140,7 @@ class Node(Core):
             return None, None
         header, sender, message = response.split(b':')
         if header != b'msg':
-            raise ValueError(f'Bad response from dispatcher: {response}')
+            raise ValueError(f'recv_message: Bad response from dispatcher: {response}')
         return sender, message
 
 
@@ -151,7 +151,7 @@ class Node(Core):
         self.send_queue.put(data_to_send)
         response = self.recv_queue.get(timeout=timeout_s)
         if response != b'message queued':
-            raise ValueError(f'Bad response from dispatcher: {response}')
+            raise ValueError(f'send_message: Bad response from dispatcher: {response}')
 
 
     def register_new_node(self, new_node_id, new_node_public_key, timeout_s=None):
@@ -165,7 +165,7 @@ class Node(Core):
             self.logger.exception(f"Dispatcher didn't answer.")
             raise
         if response != b'registered OK':
-            raise ValueError(f'Bad response from dispatcher: {response}')
+            raise ValueError(f'register_new_node: Bad response from dispatcher: {response}')
         else:
             self.logger.info(f'{new_node_id} registered successfully.')
 
