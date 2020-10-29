@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import time
+import sys
 from lisa.node import Node
 
-destination = 'esp32-01'
-
 n = Node()
+
+# if no peername is in argv, send a message to myself :'(
+destination = n.NODE_ID if len(sys.argv) < 2 else sys.argv[1]
 
 print('connecting...')
 n.start(wait_for_connection=True)

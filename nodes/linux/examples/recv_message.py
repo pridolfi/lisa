@@ -7,7 +7,7 @@ n = Node()
 
 print('connecting...')
 n.start(wait_for_connection=True)
-print('OK')
+print('OK, waiting for a message...')
 
 sender, message = n.recv_message()
 sender = sender.decode()

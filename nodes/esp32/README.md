@@ -11,7 +11,7 @@
 
 - Use within LISA virtualenv:
 ```shell
-$ lisa_esp32_generator.py my_esp32_node YOUR-WIFI-SSID nodes/esp32/main/ # folder where to store lisa_conf.c
+$ lisa_esp32_generator.py my_esp32_node YOUR-WIFI-SSID main/ # folder to store lisa_conf.c, typically same as the ESP32 app source files.
 Wi-Fi password: # enter wi-fi password
 Wi-Fi password again: # enter wi-fi password again
 2020-10-28 23:39:28,618 INFO lisa_esp32_generator.generate: Writing configuration to nodes/esp32/main/lisa_conf.c
