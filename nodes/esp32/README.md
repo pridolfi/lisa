@@ -16,7 +16,7 @@ Wi-Fi password: # enter wi-fi password
 Wi-Fi password again: # enter wi-fi password again
 2020-10-28 23:39:28,618 INFO lisa_esp32_generator.generate: Writing configuration to nodes/esp32/main/lisa_conf.c
 2020-10-28 23:39:28,680 INFO lisa_esp32_generator.generate: Writing public key to /home/user/.lisa/peers/my_esp32_node.pub
-2020-10-28 23:39:28,682 INFO lisa_esp32_generator.generate: Registering my_esp32_node to srv1.codenload.com...
+2020-10-28 23:39:28,682 INFO lisa_esp32_generator.generate: Registering my_esp32_node to dispatcher.example.org...
 2020-10-28 23:39:29,132 INFO node.register_new_node: my_esp32_node registered successfully.
 2020-10-28 23:39:30,349 INFO lisa_esp32_generator.generate: Configuration written to /home/user/lisa/nodes/esp32/main/lisa_conf.c
 # now you can build with esp-idf
