@@ -24,7 +24,6 @@ class Node(Core):
         self.running = False
         self.is_connected = False
         self.UPTIME_BEACON_PERIOD_s = 1
-        self.thread = threading.Thread(target=self.__node_thread, daemon=True)
 
 
     def __node_thread(self):
@@ -125,6 +124,7 @@ class Node(Core):
 
 
     def start(self, wait_for_connection=False):
+        self.thread = threading.Thread(target=self.__node_thread, daemon=True)
         self.thread.start()
         while wait_for_connection and not self.is_connected:
             self.logger.debug('waiting for connection...')
