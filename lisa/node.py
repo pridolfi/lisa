@@ -5,7 +5,7 @@ LISA Node (client) class.
 import socket
 import threading
 import time
-from queue import Queue
+from queue import Queue, Empty
 from ast import literal_eval
 
 from Crypto.Cipher import AES, PKCS1_v1_5
@@ -134,7 +134,10 @@ class Node(Core):
     def recv_message(self, timeout_s=None):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
-        response = self.recv_queue.get(timeout=timeout_s)
+        try:
+            response = self.recv_queue.get(timeout=timeout_s)
+        except Empty:
+            return None, None
         header, sender, message = response.split(b':')
         if header != b'msg':
             raise ValueError(f'Bad response from dispatcher: {response}')
@@ -156,7 +159,11 @@ class Node(Core):
             raise ConnectionError('Node is not connected!')
         data_to_send = b'register:' + new_node_id.encode() + b':' + new_node_public_key.export_key()
         self.send_queue.put(data_to_send)
-        response = self.recv_queue.get(timeout=timeout_s)
+        try:
+            response = self.recv_queue.get(timeout=timeout_s)
+        except Empty:
+            self.logger.exception(f"Dispatcher didn't answer.")
+            raise
         if response != b'registered OK':
             raise ValueError(f'Bad response from dispatcher: {response}')
         else:
@@ -177,6 +184,9 @@ class Node(Core):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         self.send_queue.put(b'list_devices')
-        response = self.recv_queue.get(timeout=timeout_s)
+        try:
+            response = self.recv_queue.get(timeout=timeout_s)
+        except Empty:
+            return None
         response = response.decode()
         return literal_eval(response)
