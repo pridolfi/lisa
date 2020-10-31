@@ -166,9 +166,10 @@ class Node(Core):
             raise ConnectionError('Node is not connected!')
         data_to_send = b'msg:' + receiver.encode() + b':' + message.encode()
         self.send_queue.put(data_to_send)
-        response = self.recv_queue.get(timeout=timeout_s)
-        if response != b'message queued':
-            raise ValueError(f'send_message: Bad response from dispatcher: {response}')
+        self.message_sent.clear()
+        flag = self.message_sent.wait(timeout=timeout_s)
+        if not flag:
+            raise TimeoutError('Dispatcher did not confirm receiving message to send.')
 
 
     def register_new_node(self, new_node_id, new_node_public_key, timeout_s=None):
