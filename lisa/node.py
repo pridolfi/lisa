@@ -27,8 +27,7 @@ class Node(Core):
         self.UPTIME_BEACON_PERIOD_s = 1
         self.message_sent = Event()
         self.register_event = Event()
-        self.list_devices.response = {}
-        self.list_devices.event = Event()
+        self.listed_devices = {'event':Event(), 'data':{}}
 
 
     def process_response(self, response):
@@ -39,8 +38,8 @@ class Node(Core):
             self.message_sent.set()
             return
         elif response.startswith(b'list_devices:'):
-            self.list_devices.response = literal_eval(response[13:].decode())
-            self.list_devices.event.set()
+            self.listed_devices['data'] = literal_eval(response[13:].decode())
+            self.listed_devices['event'].set()
             return
         elif response.startswith(b'msg:'):
             self.recv_queue.put(response[4:])
@@ -200,10 +199,10 @@ class Node(Core):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         self.send_queue.put(b'list_devices')
-        self.register_event.clear()
-        flag = self.list_devices.event.wait(timeout=timeout_s)
+        self.listed_devices['event'].clear()
+        flag = self.listed_devices['event'].wait(timeout=timeout_s)
         if flag:
-            self.list_devices.event.clear()
-            return self.list_devices.response
+            self.listed_devices['event'].clear()
+            return self.listed_devices['data']
         else:
             raise TimeoutError('Dispatcher did not answer to list_devices.')
