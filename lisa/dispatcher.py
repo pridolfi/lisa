@@ -42,7 +42,7 @@ class Dispatcher(Core):
 
 
     def list_devices(self):
-        return str(self.devices).encode()
+        return b'list_devices:' + str(self.devices).encode()
 
 
     def process_data(self, recv_data, peername):

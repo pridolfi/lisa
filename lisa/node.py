@@ -7,6 +7,7 @@ import threading
 import time
 from queue import Queue, Empty
 from ast import literal_eval
+from threading import Event
 
 from Crypto.Cipher import AES, PKCS1_v1_5
 
@@ -24,7 +25,28 @@ class Node(Core):
         self.running = False
         self.is_connected = False
         self.UPTIME_BEACON_PERIOD_s = 1
+        self.message_sent = Event()
+        self.register_event = Event()
+        self.list_devices.response = {}
+        self.list_devices.event = Event()
 
+
+    def process_response(self, response):
+        if response == b'registered OK':
+            self.register_event.set()
+            return
+        elif response == b'message queued':
+            self.message_sent.set()
+            return
+        elif response.startswith(b'list_devices:'):
+            self.list_devices.response = literal_eval(response[13:].decode())
+            self.list_devices.event.set()
+            return
+        elif response.startswith(b'msg:'):
+            self.recv_queue.put(response[4:])
+            return
+        self.logger.warning('unrecognized response: %s', response)
+        
 
     def __node_thread(self):
         self.logger.debug('starting node session')
@@ -41,26 +63,18 @@ class Node(Core):
         while self.running:
             try:
                 self.__lisa_connect()
-                start = time.monotonic()
                 while self.running:
-                    data_to_send = None
                     uptime_message = ''
-                    if not self.send_queue.empty():
-                        data_to_send = self.send_queue.get_nowait()
-                    elif time.monotonic() >= (start + self.UPTIME_BEACON_PERIOD_s):
-                        start = time.monotonic()
-                        uptime_ms = int(start*1000)
+                    try:
+                        data_to_send = self.send_queue.get(timeout=self.UPTIME_BEACON_PERIOD_s)
+                    except Empty:
+                        uptime_ms = int(time.monotonic()*1000)
                         uptime_message = f'uptime:{uptime_ms}'.encode()
                         data_to_send = uptime_message
-                    if data_to_send:
-                        self.__lisa_send(data_to_send)
-                        response = self.__lisa_recv()
-                        if response != uptime_message:
-                            self.recv_queue.put(response)
-                        else:
-                            end = time.monotonic()
-                            t = end - start
-                            time.sleep(1-t if t < 1 else 1)
+                    self.__lisa_send(data_to_send)
+                    response = self.__lisa_recv()
+                    if response != uptime_message:
+                        self.process_response(response)
             except Exception as ex:
                 self.logger.exception(str(ex))
                 time.sleep(1)
@@ -144,10 +158,8 @@ class Node(Core):
             response = self.recv_queue.get(timeout=timeout_s)
         except Empty:
             return None, None
-        header, sender, message = response.split(b':')
-        if header != b'msg':
-            raise ValueError(f'recv_message: Bad response from dispatcher: {response}')
-        return sender, message
+        sender, message = response.split(b':')
+        return sender.decode(), message.decode()
 
 
     def send_message(self, receiver, message, timeout_s=None):
@@ -165,15 +177,13 @@ class Node(Core):
             raise ConnectionError('Node is not connected!')
         data_to_send = b'register:' + new_node_id.encode() + b':' + new_node_public_key.export_key()
         self.send_queue.put(data_to_send)
-        try:
-            response = self.recv_queue.get(timeout=timeout_s)
-        except Empty:
-            self.logger.exception(f"Dispatcher didn't answer.")
-            raise
-        if response != b'registered OK':
-            raise ValueError(f'register_new_node: Bad response from dispatcher: {response}')
-        else:
+        self.register_event.clear()
+        flag = self.register_event.wait(timeout=timeout_s)
+        if flag:
             self.logger.info(f'{new_node_id} registered successfully.')
+            self.register_event.clear()
+        else:
+            raise TimeoutError('Dispatcher did not answer to registration.')
 
 
     def set_dispatcher(self, uri):
@@ -190,9 +200,10 @@ class Node(Core):
         if not self.is_connected:
             raise ConnectionError('Node is not connected!')
         self.send_queue.put(b'list_devices')
-        try:
-            response = self.recv_queue.get(timeout=timeout_s)
-        except Empty:
-            return None
-        response = response.decode()
-        return literal_eval(response)
+        self.register_event.clear()
+        flag = self.list_devices.event.wait(timeout=timeout_s)
+        if flag:
+            self.list_devices.event.clear()
+            return self.list_devices.response
+        else:
+            raise TimeoutError('Dispatcher did not answer to list_devices.')
