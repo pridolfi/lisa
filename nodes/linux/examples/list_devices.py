@@ -18,5 +18,5 @@ for device in devices:
     print('* uptime:    {}'.format(devices[device]['uptime']))
     last_seen = datetime.fromtimestamp(devices[device]['last_seen'])
     print('* last seen: {}'.format(last_seen.strftime('%Y-%m-%d %H:%M:%S')))
-
+    print('* msg count: {}'.format(devices[device]['msg_count']))
 n.close()

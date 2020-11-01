@@ -49,7 +49,7 @@ class Dispatcher(Core):
         self.logger.debug('%s: %s', peername, recv_data)
 
         if not peername in self.devices:
-            self.devices[peername] = {'uptime': 0}
+            self.devices[peername] = {'uptime': 0, 'msg_count': 0}
         self.devices[peername]['last_seen'] = time.time()
 
         if peername in self.messages:
