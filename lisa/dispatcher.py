@@ -52,6 +52,9 @@ class Dispatcher(Core):
             self.devices[peername] = {'uptime': 0}
         self.devices[peername]['last_seen'] = time.time()
 
+        if self.messages[peername]:
+            self.devices[peername]['msg_count'] = self.messages[peername].qsize()
+
         if recv_data.startswith(b'uptime:'):
             self.devices[peername]['uptime'] = int(recv_data.split(b':')[1])
 
