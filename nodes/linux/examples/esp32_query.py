@@ -11,20 +11,17 @@ n = Node()
 while True:
     try:
         i = 0
-        print('connecting...')
         n.start(wait_for_connection=True)        
-        print('OK')
-        devices = n.list_devices(timeout_s=5)
-        devices = [dev for dev in devices if 'esp32' in dev]       
         while True:
+            devices = n.list_devices(timeout_s=5)
+            devices = [dev for dev in devices if 'esp32' in dev]       
             for device in devices:
                 print(f'querying {device}...')
                 n.send_message(device, f'message {i}', timeout_s=5)
+            sender, message = n.recv_message(timeout_s=5)
+            while sender:
+                print(f'message from {sender}: {message}')
                 sender, message = n.recv_message(timeout_s=5)
-                if sender:
-                    print(f'message from {sender}: {message}')
-                else:
-                    print(f'timeout.')
             i += 1
     except Exception as ex:
         print(f'exception {str(ex)}')
