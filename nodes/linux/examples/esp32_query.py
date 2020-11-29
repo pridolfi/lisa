@@ -16,8 +16,9 @@ while True:
             devices = n.list_devices(timeout_s=5)
             devices = [dev for dev in devices if 'esp32' in dev]       
             for device in devices:
-                print(f'querying {device}...')
-                n.send_message(device, f'message {i}', timeout_s=5)
+                message = f'message {i}'
+                print(f'send "{message}" to {device}...')
+                n.send_message(device, message, timeout_s=5)
             sender, message = n.recv_message(timeout_s=5)
             while sender:
                 print(f'message from {sender}: {message}')

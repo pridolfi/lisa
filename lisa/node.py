@@ -157,7 +157,8 @@ class Node(Core):
             response = self.recv_queue.get(timeout=timeout_s)
         except Empty:
             return None, None
-        sender, message = response.split(b':')
+        sender = response[:response.index(b':')]
+        message = response[response.index(b':')+1:]
         return sender.decode(), message.decode()
 
 
