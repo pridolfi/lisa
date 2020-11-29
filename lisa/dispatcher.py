@@ -67,9 +67,9 @@ class Dispatcher(Core):
             return b'registered OK'
 
         if recv_data.startswith(b'msg:'):
-            fields = recv_data.split(b':')
-            receiver = fields[1]
-            message = ':'.join(fields[2:])
+            recv_data = recv_data[4:]
+            receiver = recv_data[:recv_data.index(':')]
+            message = recv_data[recv_data.index(':')+1:]
             receiver = receiver.decode('utf-8')
             self.put_message(peername, receiver, message)
             return b'message queued'
