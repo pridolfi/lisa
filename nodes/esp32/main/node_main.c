@@ -48,6 +48,7 @@ void app_main(void)
 {
     char from[32];
     char msg[128];
+    char out[192];
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -58,8 +59,8 @@ void app_main(void)
     while (1) {
         if (!lisa_recv_message(from, 32, msg, 128)) {
             ESP_LOGI(TAG, "message from %s: %s", from, msg);
-            snprintf(msg, 128, "Hi, %s, how are you?", from);
-            lisa_send_message(from, msg);
+            snprintf(out, 192, "Hi, %s, you sent: %s", from, msg);
+            lisa_send_message(from, out);
         }
         vTaskDelay(10);
     }
