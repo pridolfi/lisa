@@ -68,8 +68,8 @@ class Dispatcher(Core):
 
         if recv_data.startswith(b'msg:'):
             recv_data = recv_data[4:]
-            receiver = recv_data[:recv_data.index(':')]
-            message = recv_data[recv_data.index(':')+1:]
+            receiver = recv_data[:recv_data.index(b':')]
+            message = recv_data[recv_data.index(b':')+1:]
             receiver = receiver.decode('utf-8')
             self.put_message(peername, receiver, message)
             return b'message queued'
